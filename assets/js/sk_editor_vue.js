@@ -4,6 +4,15 @@ createApp({
     setup() {
         // --- State ---
         const config = ref(TEMPLATE_CONFIG);
+        // Filter out legacy 'jabatan_selector' from dynamic form if it exists, 
+        // as we now use the dedicated "Penandatangan" sidebar section.
+        if (config.value && Array.isArray(config.value)) {
+            config.value.forEach(section => {
+                if (section.fields) {
+                    section.fields = section.fields.filter(f => f.variable !== 'jabatan_selector');
+                }
+            });
+        }
         const templateHtml = ref(TEMPLATE_HTML);
         const templateId = ref(TEMPLATE_ID);
         const siteUrl = ref(SITE_URL);
@@ -11,6 +20,7 @@ createApp({
 
         // Form Data (Reactive)
         const formData = reactive({});
+        const pejabatList = ref(typeof PEJABAT_DATA !== 'undefined' ? PEJABAT_DATA : []);
 
         // Global Settings (Reactive & Persistent)
         const globalSettings = reactive({
@@ -27,7 +37,8 @@ createApp({
             kopTitle2: 'DIREKTORAT JENDERAL BADAN PERADILAN AGAMA',
             kopTitle3: 'PENGADILAN TINGGI AGAMA GORONTALO',
             kopTitle4: 'PENGADILAN AGAMA GORONTALO',
-            kopAddress: 'Jalan Achmad Nadjamuddin No.22, Dulalowo Timur, Kecamatan Kota Tengah\nKota Gorontalo, 96138. www.pa-gorontalo.go.id, surat@pa-gorontalo.go.id'
+            kopAddress: 'Jalan Achmad Nadjamuddin No.22, Dulalowo Timur, Kecamatan Kota Tengah\nKota Gorontalo, 96138. www.pa-gorontalo.go.id, surat@pa-gorontalo.go.id',
+            kopLogoWidth: 100 // Default width in px
         });
 
         // Theme Logic
@@ -85,18 +96,32 @@ createApp({
         // --- Watchers for Smart Logic ---
 
         // 1. Signatory Logic
-        watch(() => formData.jabatan_selector, (newVal) => {
-            if (!newVal) return;
-            const titles = {
-                'Ketua': 'KETUA PENGADILAN AGAMA GORONTALO',
-                'Wakil Ketua': 'WAKIL KETUA PENGADILAN AGAMA GORONTALO',
-                'Panitera': 'PANITERA PENGADILAN AGAMA GORONTALO',
-                'Sekretaris': 'SEKRETARIS PENGADILAN AGAMA GORONTALO'
-            };
-            if (titles[newVal]) {
-                formData.jabatan_penandatangan = titles[newVal];
+        const onPejabatSelect = (event) => {
+            const selectedId = event.target.value;
+            const pejabat = pejabatList.value.find(p => p.id == selectedId);
+
+            if (pejabat) {
+                // Determine full title if needed, or use DB value directly
+                // Ideally DB should hold full title. for now we map if simple.
+                let jabatanFull = pejabat.jabatan;
+
+                // Optional: Map short names to long names if DB has short names (Legacy Support)
+                // If DB has "Ketua", map to full title. If DB has full title, keep it.
+                const titles = {
+                    'Ketua': 'KETUA PENGADILAN AGAMA GORONTALO',
+                    'Wakil Ketua': 'WAKIL KETUA PENGADILAN AGAMA GORONTALO',
+                    'Panitera': 'PANITERA PENGADILAN AGAMA GORONTALO',
+                    'Sekretaris': 'SEKRETARIS PENGADILAN AGAMA GORONTALO'
+                };
+                if (titles[pejabat.jabatan]) {
+                    jabatanFull = titles[pejabat.jabatan];
+                }
+
+                formData.nama_penandatangan = pejabat.nama;
+                formData.nip_penandatangan = pejabat.nip;
+                formData.jabatan_penandatangan = jabatanFull;
             }
-        });
+        };
 
         // 2. Date Logic (Indo + Hijri)
         watch(() => formData.tanggal_sk, (newVal) => {
@@ -127,11 +152,67 @@ createApp({
         const previewHtml = computed(() => {
             let html = templateHtml.value;
 
+            // 0. PRE-PROCESS: Inject Logo Width & Custom Logo Override (Kop Logo)
+            // Use formData.skLogo if exists (Local Draft), else globalSettings.kopLogo (Default)
+            const activeLogo = formData.skLogo || globalSettings.kopLogo;
+            const activeWidth = formData.skLogoWidth || globalSettings.kopLogoWidth;
+
+            if (activeLogo) {
+                const widthStyle = activeWidth ? `width: ${activeWidth}px` : '';
+                const logoPlaceholder = activeLogo; // Use the actual base64/url
+
+                // Regex to find an img tag containing the global placeholder
+                const imgPlaceholderRegex = /<img([^>]*?)src=["']\{\{globalSettings\.kopLogo\}\}["']([^>]*?)>/gi;
+
+                html = html.replace(imgPlaceholderRegex, (match, pre, post) => {
+                    // Inject style and replace src
+                    return `<img${pre}src="${logoPlaceholder}" style="${widthStyle}"${post}>`;
+                });
+            }
+
+            // 0b. INJECT SK CONTENT LOGO (Garuda/etc) - Top Center of Body (DOM Based)
+            if (formData.skContentLogo) {
+                try {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+
+                    const width = formData.skContentLogoWidth || 100;
+                    const logoDiv = doc.createElement('div');
+                    logoDiv.style.width = '100%';
+                    logoDiv.style.marginTop = '0px';
+                    logoDiv.style.marginBottom = '15px';
+                    logoDiv.style.textAlign = 'center';
+                    logoDiv.style.clear = 'both';
+                    logoDiv.style.position = 'relative';
+                    logoDiv.style.display = 'block';
+
+                    const img = doc.createElement('img');
+                    img.src = formData.skContentLogo;
+                    img.style.width = `${width}px`;
+                    img.style.height = 'auto';
+                    img.style.display = 'inline-block';
+
+                    logoDiv.appendChild(img);
+
+                    // FORCE TOP: Insert as the very first element of the body
+                    if (doc.body.firstChild) {
+                        doc.body.insertBefore(logoDiv, doc.body.firstChild);
+                    } else {
+                        doc.body.appendChild(logoDiv);
+                    }
+
+                    html = doc.body.innerHTML;
+                } catch (e) {
+                    console.error("Auto-inject logo failed:", e);
+                    const logoHtml = `<div style="text-align: center; width: 100%; margin: 0 0 15px 0;"><img src="${formData.skContentLogo}" style="width: ${formData.skContentLogoWidth || 100}px;"></div>`;
+                    html = logoHtml + html;
+                }
+            }
+
             // 1. Simple Replacements (FormData)
             for (const [key, value] of Object.entries(formData)) {
-                if (Array.isArray(value)) continue; // Skip repeaters for now
+                if (Array.isArray(value)) continue;
                 const regex = new RegExp(`{{${key}}}`, 'g');
-                // Convert newlines to <br> for textareas
                 const formattedValue = String(value).replace(/\n/g, '<br>');
                 html = html.replace(regex, formattedValue);
             }
@@ -151,7 +232,6 @@ createApp({
 
                         html = html.replace(loopRegex, (match, content) => {
                             return items.map(item => {
-                                // Convert newlines to <br> for repeater items
                                 const formattedItem = String(item).replace(/\n/g, '<br>');
                                 return content.replace(/{{this}}/g, formattedItem);
                             }).join('');
@@ -160,14 +240,11 @@ createApp({
                 });
             });
 
-            // 3. Conditional Logic ({{#if variable}})
+            // 3. Conditional Logic
             const ifRegex = /{{#if\s+(.*?)}}([\s\S]*?){{\/if}}/g;
             html = html.replace(ifRegex, (match, variable, content) => {
-                // Check formData
                 if (formData[variable]) return content;
-                // Check globalSettings
                 if (globalSettings[variable]) return content;
-
                 return '';
             });
 
@@ -175,26 +252,17 @@ createApp({
         });
 
         const paperStyle = computed(() => {
-            const width = globalSettings.orientation === 'landscape' ? '297mm' : '210mm'; // Base A4 width/height swap
+            const width = globalSettings.orientation === 'landscape' ? '297mm' : '210mm';
             const minHeight = globalSettings.orientation === 'landscape' ? '210mm' : '297mm';
-
-            // Adjust for F4/Legal if needed (simplified for now, can expand)
-
-            return {
-                width: width,
-                minHeight: minHeight,
-                padding: '0'
-            };
+            return { width, minHeight, padding: '0' };
         });
 
         const addRepeaterItem = (variable) => {
             if (!formData[variable]) formData[variable] = [];
-            formData[variable].push(''); // Simply push an empty string or object for now
+            formData[variable].push('');
         };
         const removeRepeaterItem = (variable, index) => {
-            if (formData[variable]) {
-                formData[variable].splice(index, 1);
-            }
+            if (formData[variable]) formData[variable].splice(index, 1);
         };
 
         const handleLogoUpload = (event) => {
@@ -202,7 +270,53 @@ createApp({
             if (file) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    globalSettings.kopLogo = e.target.result;
+                    // Save to SK Draft specific field
+                    formData.skLogo = e.target.result;
+                    // Initialize width if not present
+                    if (!formData.skLogoWidth) formData.skLogoWidth = globalSettings.kopLogoWidth;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        const handleContentLogoUpload = (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                // Resize Image Logic to prevent Server Error (Payload too large)
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+
+                        // Max dimensions
+                        const MAX_WIDTH = 500;
+                        const MAX_HEIGHT = 500;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_WIDTH) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                            }
+                        } else {
+                            if (height > MAX_HEIGHT) {
+                                width *= MAX_HEIGHT / height;
+                                height = MAX_HEIGHT;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Compress to PNG (Preserve Transparency)
+                        formData.skContentLogo = canvas.toDataURL('image/png');
+                        if (!formData.skContentLogoWidth) formData.skContentLogoWidth = 100; // Default 100px
+                    };
+                    img.src = e.target.result;
                 };
                 reader.readAsDataURL(file);
             }
@@ -282,53 +396,11 @@ createApp({
             style.id = 'dynamic-print-style';
             // IMPORTANT: @page must be at the top level, NOT inside @media print
             // We set margin to 0 here because we are handling margins inside .paper-page padding
+            // We ONLY inject page size here. Visibility is handled by static CSS in editor_view.php
             style.innerHTML = `
                 @page {
                     size: ${sizeCSS};
                     margin: 0; 
-                }
-                @media print {
-                    /* Hide everything by default */
-                    body * {
-                        visibility: hidden;
-                    }
-                    
-                    /* Show only the pagination container and its children */
-                    #pagination-container, #pagination-container * {
-                        visibility: visible;
-                    }
-                    
-                    /* Position the container at the top left */
-                    #pagination-container {
-                        position: absolute;
-                        left: 0;
-                        top: 0;
-                        width: 100%;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        /* Remove the space-y-8 gap from editor view */
-                        display: block !important; 
-                    }
-                    
-                    /* Style individual pages for print */
-                    .paper-page {
-                        box-shadow: none !important;
-                        margin: 0 !important;
-                        border: none !important;
-                        /* Force page break after each page */
-                        break-after: page;
-                        page-break-after: always;
-                        /* Ensure background is white */
-                        background: white !important;
-                        /* Reset any transform/scale */
-                        transform: none !important;
-                    }
-                    
-                    /* Hide the last page break to avoid an empty trailing page */
-                    .paper-page:last-child {
-                        break-after: auto;
-                        page-break-after: auto;
-                    }
                 }
             `;
             document.head.appendChild(style);
@@ -500,20 +572,12 @@ createApp({
             }
         };
 
-        // Pejabat Logic
-        const pejabatList = ref(typeof PEJABAT_DATA !== 'undefined' ? PEJABAT_DATA : []);
-        const onPejabatChange = (event) => {
-            const selectedName = event.target.value;
-            const pejabat = pejabatList.value.find(p => p.nama === selectedName);
-            if (pejabat) {
-                if (typeof formData.nip_penandatangan !== 'undefined') {
-                    formData.nip_penandatangan = pejabat.nip;
-                }
-                if (typeof formData.jabatan_penandatangan !== 'undefined') {
-                    formData.jabatan_penandatangan = pejabat.jabatan;
-                }
-            }
-        };
+
+
+
+
+
+
 
 
         const paginate = () => {
@@ -525,85 +589,142 @@ createApp({
             outputContainer.innerHTML = '';
 
             // Get Page Dimensions from Settings
-            // We need pixel values for calculations. 
-            // Assuming 96 DPI (standard for screen), 1mm = 3.78px
-            const mmToPx = 3.78;
-
-            // Parse dimensions from globalSettings or defaults
+            const mmToPx = 3.78; // Approx 96 DPI
             let pageHeightMm = 297; // Default A4
             let pageWidthMm = 210;
 
             if (globalSettings.paperSize === 'F4') {
                 pageHeightMm = 330; pageWidthMm = 215;
             }
-
             if (globalSettings.orientation === 'landscape') {
                 [pageHeightMm, pageWidthMm] = [pageWidthMm, pageHeightMm];
             }
 
             const pageHeightPx = pageHeightMm * mmToPx;
-            const pageWidthPx = pageWidthMm * mmToPx;
-
+            // Margins
             const marginTopPx = (globalSettings.marginTop || 20) * mmToPx;
             const marginBottomPx = (globalSettings.marginBottom || 20) * mmToPx;
-            const marginLeftPx = (globalSettings.marginLeft || 25) * mmToPx;
-            const marginRightPx = (globalSettings.marginRight || 20) * mmToPx;
-
             const contentHeightPx = pageHeightPx - marginTopPx - marginBottomPx;
 
-            // Helper to create a new page
-            const createPage = (pageNum) => {
+            let pageCount = 0;
+            let currentContent = null;
+            let currentH = 0;
+
+            const createPage = () => {
+                pageCount++;
                 const page = document.createElement('div');
                 page.className = 'paper-page bg-white shadow-lg relative';
                 page.style.width = `${pageWidthMm}mm`;
                 page.style.height = `${pageHeightMm}mm`;
                 page.style.padding = `${globalSettings.marginTop}mm ${globalSettings.marginRight}mm ${globalSettings.marginBottom}mm ${globalSettings.marginLeft}mm`;
-                page.style.boxSizing = 'border-box';
-                page.style.overflow = 'hidden'; // Hide overflow
-                page.dataset.pageNum = pageNum;
+                page.dataset.pageNum = pageCount;
 
-                // Page Content Wrapper
                 const content = document.createElement('div');
                 content.className = 'page-content';
                 content.style.width = '100%';
                 content.style.height = '100%';
-                page.appendChild(content);
+                content.style.overflow = 'hidden';
 
+                page.appendChild(content);
                 outputContainer.appendChild(page);
+
+                currentContent = content;
+                currentH = 0;
                 return content;
             };
 
-            let currentPageContent = createPage(1);
-            let currentHeight = 0;
+            // Start First Page
+            createPage();
 
-            // Clone raw content to avoid destroying the source
-            // IMPORTANT: sourceNodes must be from the DOM *after* fixAutoFormatting
-            const sourceNodes = Array.from(rawContainer.children[0].cloneNode(true).childNodes);
+            const hasOverflow = (container) => {
+                return container.scrollHeight > container.clientHeight + 1;
+            };
 
-            sourceNodes.forEach(node => {
+            // Recursive function to process nodes
+            const processNode = (node) => {
                 if (node.nodeType === Node.TEXT_NODE && !node.textContent.trim()) return;
 
-                // Temporarily append to check height
-                currentPageContent.appendChild(node);
-                const nodeHeight = node.offsetHeight || 0;
+                // 1. Try appending directly
+                currentContent.appendChild(node);
 
-                // Check if node fits
-                if (currentHeight + nodeHeight > contentHeightPx) {
-                    // Overflow!
-                    // Remove from current page
-                    currentPageContent.removeChild(node);
+                // 2. Check Overflow
+                if (hasOverflow(currentContent)) {
+                    // Overflow detected!
 
-                    // Create new page
-                    currentPageContent = createPage(document.querySelectorAll('.paper-page').length + 1);
-                    currentHeight = 0;
+                    // Remove node
+                    currentContent.removeChild(node);
 
-                    // Append to new page
-                    currentPageContent.appendChild(node);
-                    currentHeight += nodeHeight;
-                } else {
-                    currentHeight += nodeHeight;
+                    // Strategy: Split if Table/List
+                    const tag = node.tagName;
+
+                    if (tag === 'TABLE') {
+                        // Split Table
+                        const tbody = node.querySelector('tbody') || node;
+                        const trs = Array.from(tbody.children).filter(n => n.tagName === 'TR');
+
+                        const tableHeader = node.cloneNode(false);
+                        tableHeader.style.marginBottom = '0';
+                        tableHeader.style.borderBottom = 'none';
+                        const tbodyPart1 = document.createElement('tbody');
+                        tableHeader.appendChild(tbodyPart1);
+
+                        currentContent.appendChild(tableHeader);
+
+                        const remainingTrs = [];
+
+                        trs.forEach(tr => {
+                            tbodyPart1.appendChild(tr);
+                            if (hasOverflow(currentContent)) {
+                                tbodyPart1.removeChild(tr);
+                                remainingTrs.push(tr);
+                            }
+                        });
+
+                        if (remainingTrs.length > 0) {
+                            createPage(); // New Page
+
+                            const tablePart2 = node.cloneNode(false);
+                            const tbodyPart2 = document.createElement('tbody');
+                            tablePart2.appendChild(tbodyPart2);
+                            remainingTrs.forEach(tr => tbodyPart2.appendChild(tr));
+                            processNode(tablePart2);
+                        }
+
+                    } else if (tag === 'UL' || tag === 'OL') {
+                        // Split List
+                        const lis = Array.from(node.children);
+                        const listPart1 = node.cloneNode(false);
+                        currentContent.appendChild(listPart1);
+
+                        const remainingLis = [];
+
+                        lis.forEach(li => {
+                            listPart1.appendChild(li);
+                            if (hasOverflow(currentContent)) {
+                                listPart1.removeChild(li);
+                                remainingLis.push(li);
+                            }
+                        });
+
+                        if (remainingLis.length > 0) {
+                            createPage();
+                            const listPart2 = node.cloneNode(false);
+                            remainingLis.forEach(li => listPart2.appendChild(li));
+                            processNode(listPart2);
+                        }
+                    } else {
+                        // Atomic Block -> Move to Next Page
+                        createPage();
+
+                        currentContent.appendChild(node);
+                        // If it still overflows, it's too big for one page. We leave it clipped.
+                    }
                 }
-            });
+            };
+
+            // Clone raw content nodes
+            const sourceNodes = Array.from(rawContainer.children[0].cloneNode(true).childNodes);
+            sourceNodes.forEach(node => processNode(node));
         };
 
         // Watchers for Paging
@@ -621,10 +742,11 @@ createApp({
 
         // Initial Pagination
         onMounted(() => {
-            Vue.nextTick(() => {
+            // Wait for DOM & Styles to fully settle (especially images/fonts)
+            setTimeout(() => {
                 fixAutoFormatting();
                 paginate();
-            });
+            }, 500); // 500ms delay for robustness
         });
 
         return {
@@ -638,6 +760,7 @@ createApp({
             addRepeaterItem,
             removeRepeaterItem,
             handleLogoUpload,
+            handleContentLogoUpload,
             saveDraft,
             isSaving,
             printPdf,
@@ -645,7 +768,7 @@ createApp({
             exportPdf,
             fixAutoFormatting,
             pejabatList,
-            onPejabatChange,
+            onPejabatSelect,
             paginate
         };
     }

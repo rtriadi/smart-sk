@@ -145,29 +145,33 @@
                 background: white;
                 height: auto;
                 overflow: visible;
-            }
-            #app {
-                display: block; 
-                height: auto;
-                overflow: visible;
+                display: block;
             }
             
-            /* Hide UI Elements */
-            .w-80, 
-            .h-14, 
-            .p-4.bg-gray-900, 
-            .scrollbar-hide,
+            /* Hide UI Elements by default */
+            #app > div.w-80, /* Sidebar */
+            #app > div.bg-white, /* Toolbar if any */
             button,
-            a {
+            a,
+            .no-print {
                 display: none !important;
             }
 
             /* Main Content Reset */
-            .flex-1.bg-gray-900 {
-                background: white !important;
+            #app {
+                display: block !important; 
+                height: auto !important;
+                overflow: visible !important;
+                width: 100% !important;
+            }
+
+            .flex-1 {
+                margin: 0 !important;
                 padding: 0 !important;
                 overflow: visible !important;
                 height: auto !important;
+                width: 100% !important;
+                background: white !important;
             }
 
             /* Paper Preview Reset */
@@ -249,14 +253,74 @@
                 <!-- Kop Settings -->
                 <div v-if="globalSettings.showKop" class="space-y-2 border-t border-gray-200 dark:border-gray-600 pt-3">
                     <div class="mb-2">
-                        <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1">Logo</label>
+                        <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1">SK/Draft Logo (Optional Override)</label>
                         <input type="file" @change="handleLogoUpload" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:text-gray-400 dark:file:bg-blue-900 dark:file:text-blue-200">
+                        
+                        <!-- Logo Preview & Sizing -->
+                        <div v-if="formData.skLogo || globalSettings.kopLogo" class="mt-2 bg-gray-100 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
+                            <div class="flex justify-center mb-2">
+                                <img :src="formData.skLogo || globalSettings.kopLogo" class="max-h-20 object-contain border border-gray-300 bg-white">
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <label class="text-xs text-gray-500">Width:</label>
+                                <!-- If skLogo is present, model custom width. Else if forcing override? 
+                                     Actually, handleLogoUpload initializes skLogoWidth from kopLogoWidth.
+                                     So we can safely bind to skLogoWidth IF skLogo is present?
+                                     Or simply bind to skLogoWidth ALWAYS, and ensure it defaults to kopLogoWidth?
+                                     Let's bind to formData.skLogoWidth (which we init in Vue if missing) -->
+                                <input type="range" v-model="formData.skLogoWidth" min="40" max="250" class="w-full h-1 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+                                <input type="number" v-model="formData.skLogoWidth" class="w-12 text-xs text-center border rounded dark:bg-gray-700 dark:text-white">
+                            </div>
+                            <div v-if="formData.skLogo" class="text-center mt-1">
+                                <button @click="formData.skLogo = null; formData.skLogoWidth = null" class="text-xs text-red-500 hover:underline">Reset to Global</button>
+                            </div>
+                        </div>
                     </div>
                     <input type="text" v-model="globalSettings.kopTitle1" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-500" placeholder="Line 1">
                     <input type="text" v-model="globalSettings.kopTitle2" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-500" placeholder="Line 2">
                     <input type="text" v-model="globalSettings.kopTitle3" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-500" placeholder="Line 3">
                     <input type="text" v-model="globalSettings.kopTitle4" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-500" placeholder="Line 4">
                     <textarea v-model="globalSettings.kopAddress" rows="2" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-500" placeholder="Address"></textarea>
+                </div>
+            </div>
+
+            <!-- Logo SK (Content - Tengah Atas) -->
+            <div class="bg-amber-50 dark:bg-amber-900/30 rounded-lg p-4 border border-amber-100 dark:border-amber-800 transition-colors duration-200 mb-6">
+                <h3 class="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider mb-3 flex items-center">
+                    <i class="fas fa-image mr-2"></i> Logo Tengah SK
+                </h3>
+                <div class="mb-2">
+                    <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1 font-medium">Upload Logo (e.g. Garuda)</label>
+                    <input type="file" @change="handleContentLogoUpload" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 dark:text-gray-400 dark:file:bg-amber-900 dark:file:text-amber-200">
+                    
+                    <div v-if="formData.skContentLogo" class="mt-2 bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
+                        <div class="flex justify-center mb-2">
+                            <!-- Show preview with dynamic width -->
+                            <img :src="formData.skContentLogo" class="object-contain" :style="{width: (formData.skContentLogoWidth || 100) + 'px'}">
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <label class="text-xs text-gray-500">Size:</label>
+                            <input type="range" v-model="formData.skContentLogoWidth" min="20" max="300" class="w-full h-1 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+                            <input type="number" v-model="formData.skContentLogoWidth" class="w-12 text-xs text-center border rounded dark:bg-gray-700 dark:text-white">
+                        </div>
+                         <div class="text-center mt-1">
+                            <button @click="formData.skContentLogo = null; formData.skContentLogoWidth = null" class="text-xs text-red-500 hover:underline">Remove Logo</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Signatory (Penandatangan) -->
+            <div class="bg-indigo-50 dark:bg-indigo-900/30 rounded-lg p-4 border border-indigo-100 dark:border-indigo-800 transition-colors duration-200">
+                 <h3 class="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider mb-3 flex items-center">
+                    <i class="fas fa-file-signature mr-2"></i> Penandatangan
+                </h3>
+                <div class="mb-2">
+                    <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1 font-medium">Pilih Pejabat</label>
+                    <select @change="onPejabatSelect($event)" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors">
+                        <option value="">-- Pilih --</option>
+                        <option v-for="p in pejabatList" :key="p.id" :value="p.id">{{ p.nama }} ({{ p.jabatan }})</option>
+                    </select>
                 </div>
             </div>
 
@@ -272,9 +336,13 @@
                         
                         <!-- Text/Textarea/Number -->
                         <textarea v-if="['text', 'textarea'].includes(field.type)" v-model="formData[field.variable]" rows="2"
+                            :readonly="['nama_penandatangan', 'jabatan_penandatangan'].includes(field.variable)"
+                            :class="{'bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-500': ['nama_penandatangan', 'jabatan_penandatangan'].includes(field.variable)}"
                             class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition shadow-sm"></textarea>
 
                         <input v-if="field.type === 'number'" type="number" v-model="formData[field.variable]"
+                             :readonly="['nama_penandatangan', 'jabatan_penandatangan'].includes(field.variable)"
+                             :class="{'bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-500': ['nama_penandatangan', 'jabatan_penandatangan'].includes(field.variable)}"
                              class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition shadow-sm">
                         
                         <input v-if="field.type === 'date'" type="date" v-model="formData[field.variable]"

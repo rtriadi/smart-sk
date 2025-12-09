@@ -120,8 +120,15 @@
                                 <textarea v-model="generalSettings.kopAddress" rows="2" class="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 px-2 py-1 text-sm placeholder-gray-400"></textarea>
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Logo URL / Base64</label>
-                                <input type="text" v-model="generalSettings.kopLogo" class="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 px-2 py-1 text-xs text-gray-500">
+                                <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Logo</label>
+                                <!-- File Upload for Global Logo -->
+                                <input type="file" @change="handleGlobalLogoUpload" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:text-gray-400 dark:file:bg-blue-900 dark:file:text-blue-200 mb-2">
+                                
+                                <!-- Preview -->
+                                <div v-if="generalSettings.kopLogo" class="mt-2 bg-white p-2 rounded border border-gray-200">
+                                    <img :src="generalSettings.kopLogo" class="max-h-16 object-contain mx-auto">
+                                </div>
+                                <input type="hidden" v-model="generalSettings.kopLogo">
                             </div>
                         </div>
                     </div>
@@ -284,10 +291,21 @@
                 isEditing.value = false;
             };
 
+            const handleGlobalLogoUpload = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        generalSettings.kopLogo = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
             return {
                 activeTab, isDarkMode, toggleTheme,
                 pejabatList, form, isEditing, editPejabat, resetForm,
-                generalSettings, saveGeneralSettings
+                generalSettings, saveGeneralSettings, handleGlobalLogoUpload
             };
         }
     }).mount('#app');
