@@ -1,0 +1,60 @@
+custom.css
+body { 
+ background: url(../assets/dist/img/login.png) no-repeat center center fixed;  
+ -webkit-background-size: cover;
+ -moz-background-size: cover;
+ -o-background-size: cover;
+ background-size: cover;
+}
+/*memberi style pada class panel default*/
+.panel-default {
+ opacity: 0.9;
+ margin-top:180px;
+}
+.form-group.last {
+ margin-bottom:0px;
+}
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+body { 
+ background: url(../image/bg.jpg) no-repeat center center fixed; 
+ -webkit-background-size: cover;
+ -moz-background-size: cover;
+ -o-background-size: cover;
+ background-size: cover;
+}
+/*memberi style pada class panel default*/
+.panel-default {
+ opacity: 0.9;
+ margin-top:180px;
+}
+.form-group.last {
+ margin-bottom:0px;
+}
+
+body.login-page {
+  background-image: url('../assets/dist/img/login.png');
+  background-size: cover; /* Memastikan gambar latar belakang menutupi seluruh area */
+  background-position: center; /* Memposisikan gambar latar belakang ke tengah */
+}
+
+
+.footer2{
+    width: 100%;
+    height: 100px;
+    text-align: right;
+    padding-right: 280px ;
+}
