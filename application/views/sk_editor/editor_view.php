@@ -33,6 +33,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <!-- Vue 3 (CDN) -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- TinyMCE 5 (CDN) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/5.10.7/tinymce.min.js" referrerpolicy="origin"></script>
 
     <script>
         <?php
@@ -85,12 +87,35 @@
         /* Ensure tables don't overflow */
         .paper-preview table {
             width: 100%;
-            table-layout: fixed;
+            table-layout: auto; /* Changed from fixed to auto for better column sizing */
+            border-collapse: collapse;
         }
-        .paper-preview td {
+        .paper-preview td, .paper-preview th {
             word-wrap: break-word;
             overflow-wrap: break-word;
+            border: 1px solid #000; /* Force borders */
+            padding: 4px; /* Consistent padding */
         }
+        /* Except for layout tables (Kop etc) which usually have no border class or specific id */
+        /* But here we target ALL tables in preview. This might affect the Header! */
+        /* We should scope it to .attachment-content type stuff or force no-border on main layout if needed. */
+        /* Wait, the main layout usually uses tables too. */
+        /* Strategy: Only apply borders to tables inside .attachment-content or specifically added ones. */
+        
+        /* Better: Apply general reset, but for user content tables (TinyMCE), they usually come without classes. */
+        /* Let's target .attachment-content table */
+        .attachment-content table {
+             width: 100%;
+             border-collapse: collapse;
+             margin-bottom: 1em;
+        }
+        .attachment-content td, .attachment-content th {
+            border: 1px solid #000;
+            padding: 4px;
+            vertical-align: top;
+        }
+        /* Fix Layout tables which might be in the main content ? */
+        /* If the main content has tables, they might need borders too. */
 
         /* Fix List Styles */
         /* List Styles - Robust Fix */
@@ -242,10 +267,38 @@
                     </div>
                 </div>
 
+                <!-- Typography -->
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1 font-medium">Font Size</label>
+                        <select v-model="globalSettings.fontSize" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none">
+                            <option value="10pt">10pt</option>
+                            <option value="11pt">11pt</option>
+                            <option value="12pt">12pt</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1 font-medium">Line Spacing</label>
+                        <select v-model="globalSettings.lineHeight" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none">
+                            <option value="1.0">1.0</option>
+                            <option value="1.15">1.15</option>
+                            <option value="1.5">1.5</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="flex items-center justify-between mb-3">
                     <span class="text-gray-600 dark:text-gray-400 text-xs font-medium">Show Letterhead</span>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" v-model="globalSettings.showKop" class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 dark:peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-gray-600 dark:text-gray-400 text-xs font-medium">Show Page Numbers</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" v-model="globalSettings.showPageNumbers" class="sr-only peer">
                         <div class="w-9 h-5 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 dark:peer-checked:bg-blue-600"></div>
                     </label>
                 </div>
@@ -280,7 +333,33 @@
                     <input type="text" v-model="globalSettings.kopTitle2" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-500" placeholder="Line 2">
                     <input type="text" v-model="globalSettings.kopTitle3" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-500" placeholder="Line 3">
                     <input type="text" v-model="globalSettings.kopTitle4" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-500" placeholder="Line 4">
-                    <textarea v-model="globalSettings.kopAddress" rows="2" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-500" placeholder="Address"></textarea>
+                    <textarea v-model="globalSettings.kopAddress" rows="3" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-500" placeholder="Address"></textarea>
+                </div>
+
+                <!-- Attachments (Lampiran) -->
+                <div class="mt-4 border-t border-gray-200 dark:border-gray-600 pt-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wider">Lampiran</label>
+                        <button @click="addAttachment" class="text-xs bg-indigo-50 dark:bg-blue-900 text-indigo-600 dark:text-blue-300 px-2 py-1 rounded hover:bg-indigo-100 dark:hover:bg-blue-800 transition-colors">+ Add</button>
+                    </div>
+                    
+                    <div v-if="formData.attachments && formData.attachments.length > 0" class="space-y-3">
+                        <div v-for="(att, index) in formData.attachments" :key="index" class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700 relative">
+                             <div class="flex justify-between items-center mb-1">
+                                <span class="text-[10px] text-gray-500 font-bold">LAMPIRAN #{{ index + 1 }}</span>
+                                <button @click="removeAttachment(index)" class="text-red-500 hover:text-red-700 text-xs">x</button>
+                             </div>
+                             <input type="text" v-model="att.title" class="w-full mb-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-xs px-2 py-1 text-gray-900 dark:text-gray-100" placeholder="Judul Lampiran (e.g. Daftar Pegawai)">
+                             
+                             <!-- TinyMCE Target -->
+                             <textarea :id="'attachment-editor-' + index" class="tinymce-editor w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-xs px-2 py-1 h-40"></textarea>
+                             
+                             <div class="text-[10px] text-gray-400 italic mt-1">Gunakan toolbar di atas untuk membuat tabel/list.</div>
+                        </div>
+                    </div>
+                    <div v-else class="text-center py-4 bg-gray-50 dark:bg-gray-800 rounded border border-dashed border-gray-300 dark:border-gray-600">
+                        <span class="text-xs text-gray-400">Tidak ada lampiran</span>
+                    </div>
                 </div>
             </div>
 

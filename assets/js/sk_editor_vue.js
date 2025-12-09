@@ -31,6 +31,9 @@ createApp({
             marginLeft: 25,
             marginRight: 20,
             showKop: true,
+            // Typography
+            fontSize: '12pt',
+            lineHeight: '1.5',
             // Kop Surat Fields
             kopLogo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Logo_of_the_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg/1200px-Logo_of_the_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg.png',
             kopTitle1: 'MAHKAMAH AGUNG REPUBLIK INDONESIA',
@@ -38,7 +41,8 @@ createApp({
             kopTitle3: 'PENGADILAN TINGGI AGAMA GORONTALO',
             kopTitle4: 'PENGADILAN AGAMA GORONTALO',
             kopAddress: 'Jalan Achmad Nadjamuddin No.22, Dulalowo Timur, Kecamatan Kota Tengah\nKota Gorontalo, 96138. www.pa-gorontalo.go.id, surat@pa-gorontalo.go.id',
-            kopLogoWidth: 100 // Default width in px
+            kopLogoWidth: 100, // Default width in px
+            showPageNumbers: false // Page Numbering Toggle
         });
 
         // Theme Logic
@@ -54,8 +58,6 @@ createApp({
             }
 
             // Initialize formData
-
-            // Initialize formData with defaults FIRST
             config.value.forEach(section => {
                 section.fields.forEach(field => {
                     if (field.type === 'repeater') {
@@ -65,6 +67,11 @@ createApp({
                     }
                 });
             });
+
+            // Initialize Attachments if not present
+            if (!formData.attachments) {
+                formData.attachments = [];
+            }
 
             // Then overwrite with saved draft data if it exists
             if (DRAFT_DATA) {
@@ -248,6 +255,43 @@ createApp({
                 return '';
             });
 
+            // 4. INJECT ATTACHMENTS (LAMPIRAN)
+            if (formData.attachments && formData.attachments.length > 0) {
+                formData.attachments.forEach((att, index) => {
+                    const noSK = formData.no_sk || '...';
+                    const tanggalIndo = formData.tanggal_indo || '...';
+                    const pejabatJabatan = (formData.jabatan_penandatangan || 'PEJABAT').toUpperCase();
+
+                    const lampiranHtml = `
+                        <div class="smart-attachment-break" data-title="${att.title || 'Lampiran'}"></div>
+                        <div class="attachment-header" style="float: right; text-align: left; width: 50%; margin-bottom: 20px; font-size: ${globalSettings.fontSize || '12pt'}; line-height: 1.5;">
+                            <table>
+                                <tr>
+                                    <td style="vertical-align: top;">LAMPIRAN</td>
+                                    <td style="vertical-align: top;">:</td>
+                                    <td>KEPUTUSAN ${pejabatJabatan}</td>
+                                </tr>
+                                <tr>
+                                    <td style="vertical-align: top;">NOMOR</td>
+                                    <td style="vertical-align: top;">:</td>
+                                    <td>${noSK}</td>
+                                </tr>
+                                <tr>
+                                    <td style="vertical-align: top;">TANGGAL</td>
+                                    <td style="vertical-align: top;">:</td>
+                                    <td>${tanggalIndo}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div style="clear: both;"></div>
+                        <div class="attachment-content">
+                            ${(att.content || '')}
+                        </div>
+                    `;
+                    html += lampiranHtml;
+                });
+            }
+
             return html;
         });
 
@@ -263,6 +307,66 @@ createApp({
         };
         const removeRepeaterItem = (variable, index) => {
             if (formData[variable]) formData[variable].splice(index, 1);
+        };
+
+        const addAttachment = () => {
+            if (!formData.attachments) formData.attachments = [];
+            formData.attachments.push({ title: 'Lampiran ...', content: '' });
+
+            // Initialize TinyMCE for the new item
+            const index = formData.attachments.length - 1;
+            const id = `attachment-editor-${index}`;
+            Vue.nextTick(() => {
+                initTinyMCE(id, index);
+            });
+        };
+
+        const removeAttachment = (index) => {
+            // Destroy TinyMCE instance first
+            const id = `attachment-editor-${index}`;
+            if (typeof tinymce !== 'undefined' && tinymce.get(id)) {
+                tinymce.get(id).remove();
+            }
+            formData.attachments.splice(index, 1);
+        };
+
+        const initTinyMCE = (id, index) => {
+            if (typeof tinymce === 'undefined') {
+                console.error("TinyMCE not loaded");
+                return;
+            }
+
+            // Allow time for DOM to render
+            setTimeout(() => {
+                const isDark = document.documentElement.classList.contains('dark');
+
+                tinymce.init({
+                    selector: `#${id}`,
+                    menubar: false,
+                    statusbar: false,
+                    height: 500,
+                    skin: isDark ? 'oxide-dark' : 'oxide',
+                    content_css: isDark ? 'dark' : 'default',
+                    plugins: 'table lists advlist',
+                    toolbar: 'undo redo | bold italic | alignleft aligncenter alignright | bullist numlist | table',
+                    content_style: 'body { font-family:Times New Roman,Times,serif; font-size:12pt; } table { width: 100% !important; border-collapse: collapse; } td, th { border: 1px solid #000; padding: 4px; vertical-align: top; }',
+                    setup: (editor) => {
+                        // Set initial value
+                        editor.on('init', () => {
+                            if (formData.attachments[index] && formData.attachments[index].content) {
+                                editor.setContent(formData.attachments[index].content);
+                            }
+                        });
+
+                        // Sync data on change
+                        editor.on('Change Keyup', () => {
+                            if (formData.attachments[index]) {
+                                formData.attachments[index].content = editor.getContent();
+                            }
+                        });
+                    }
+                });
+            }, 100);
         };
 
         const handleLogoUpload = (event) => {
@@ -321,6 +425,7 @@ createApp({
                 reader.readAsDataURL(file);
             }
         };
+
 
         const isSaving = ref(false);
 
@@ -617,6 +722,11 @@ createApp({
                 page.style.width = `${pageWidthMm}mm`;
                 page.style.height = `${pageHeightMm}mm`;
                 page.style.padding = `${globalSettings.marginTop}mm ${globalSettings.marginRight}mm ${globalSettings.marginBottom}mm ${globalSettings.marginLeft}mm`;
+
+                // TYPOGRAPHY
+                page.style.fontSize = globalSettings.fontSize || '12pt';
+                page.style.lineHeight = globalSettings.lineHeight || '1.5';
+
                 page.dataset.pageNum = pageCount;
 
                 const content = document.createElement('div');
@@ -643,6 +753,12 @@ createApp({
             // Recursive function to process nodes
             const processNode = (node) => {
                 if (node.nodeType === Node.TEXT_NODE && !node.textContent.trim()) return;
+
+                // 0. HANDLE ATTACHMENT BREAKS
+                if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('smart-attachment-break')) {
+                    createPage();
+                    return; // The break itself is invisible, just triggers a new page
+                }
 
                 // 1. Try appending directly
                 currentContent.appendChild(node);
@@ -725,6 +841,22 @@ createApp({
             // Clone raw content nodes
             const sourceNodes = Array.from(rawContainer.children[0].cloneNode(true).childNodes);
             sourceNodes.forEach(node => processNode(node));
+
+            // 3. POST-PROCESS: PAGE NUMBERING
+            if (globalSettings.showPageNumbers) {
+                const pages = outputContainer.querySelectorAll('.paper-page');
+                const totalPages = pages.length;
+                pages.forEach((page, index) => {
+                    const pageNum = index + 1;
+                    const footer = document.createElement('div');
+                    footer.className = 'page-footer absolute text-xs text-gray-500';
+                    footer.style.bottom = `${globalSettings.marginBottom / 2}mm`; // Position in the margin area
+                    footer.style.right = `${globalSettings.marginRight}mm`;
+                    footer.style.fontFamily = 'Arial, sans-serif'; // Footer usually standard font
+                    footer.innerText = `Halaman ${pageNum} dari ${totalPages}`;
+                    page.appendChild(footer);
+                });
+            }
         };
 
         // Watchers for Paging
@@ -739,13 +871,25 @@ createApp({
         watch(() => globalSettings.orientation, () => Vue.nextTick(paginate));
         watch(() => globalSettings.marginTop, () => Vue.nextTick(paginate));
         watch(() => globalSettings.marginBottom, () => Vue.nextTick(paginate));
+        watch(() => globalSettings.fontSize, () => Vue.nextTick(paginate));
+        watch(() => globalSettings.lineHeight, () => Vue.nextTick(paginate));
+        watch(() => globalSettings.showPageNumbers, () => Vue.nextTick(paginate));
 
+        // Initial Pagination
         // Initial Pagination
         onMounted(() => {
             // Wait for DOM & Styles to fully settle (especially images/fonts)
             setTimeout(() => {
                 fixAutoFormatting();
                 paginate();
+
+                // Initialize TinyMCE for existing attachments
+                if (formData.attachments && formData.attachments.length > 0) {
+                    formData.attachments.forEach((_, index) => {
+                        const id = `attachment-editor-${index}`;
+                        initTinyMCE(id, index);
+                    });
+                }
             }, 500); // 500ms delay for robustness
         });
 
@@ -759,6 +903,8 @@ createApp({
             paperStyle,
             addRepeaterItem,
             removeRepeaterItem,
+            addAttachment,
+            removeAttachment,
             handleLogoUpload,
             handleContentLogoUpload,
             saveDraft,
