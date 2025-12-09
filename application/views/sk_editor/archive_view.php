@@ -27,6 +27,10 @@
     </script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Toastr & jQuery -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <!-- Vue 3 (CDN) -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
@@ -45,8 +49,8 @@
     <!-- Header -->
     <div class="flex justify-between items-center mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 transition-colors duration-200">
         <div class="flex items-center">
-            <a :href="dashboardUrl()" class="text-gray-400 hover:text-indigo-600 dark:hover:text-white mr-4 transition" title="Back to Dashboard">
-                <i class="fas fa-arrow-left text-xl"></i>
+            <a :href="dashboardUrl()" class="text-gray-500 hover:text-indigo-600 dark:hover:text-white mr-4 transition flex items-center font-medium" title="Back to Templates">
+                <i class="fas fa-arrow-left mr-2"></i> Templates
             </a>
             <div>
                 <h1 class="text-2xl font-bold text-slate-800 dark:text-white transition-colors duration-200">Saved Drafts</h1>
@@ -55,9 +59,12 @@
         </div>
         <div class="flex items-center space-x-3">
              <!-- Theme Toggle -->
-            <button @click="toggleTheme" class="w-10 h-10 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-yellow-400 shadow-sm transition flex items-center justify-center" title="Toggle Theme">
+            <button @click="toggleTheme" class="w-10 h-10 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-yellow-400 shadow-sm transition flex items-center justify-center mr-2" title="Toggle Theme">
                 <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
             </button>
+            <a href="<?php echo site_url('auth/logout'); ?>" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow-md transition flex items-center font-medium" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
         </div>
     </div>
 
@@ -89,6 +96,12 @@
                     <td class="p-4 text-right space-x-2">
                         <a :href="editUrl(a.id)" class="text-amber-500 hover:text-amber-600 dark:hover:text-amber-400 transition inline-block p-1" title="Edit Draft">
                             <i class="fas fa-edit"></i>
+                        </a>
+                        <button @click="renameDraft(a)" class="text-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition inline-block p-1" title="Rename Draft">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                        <a :href="cloneUrl(a.id)" class="text-purple-500 hover:text-purple-600 dark:hover:text-purple-400 transition inline-block p-1" title="Duplicate Draft" onclick="return confirm('Duplicate this draft?');">
+                            <i class="fas fa-copy"></i>
                         </a>
                         <a :href="printUrl(a.id)" target="_blank" class="text-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition inline-block p-1" title="Print PDF">
                             <i class="fas fa-print"></i>

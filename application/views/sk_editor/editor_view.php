@@ -27,6 +27,10 @@
     </script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Toastr & jQuery -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <!-- Vue 3 (CDN) -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
@@ -48,6 +52,7 @@
         var DRAFT_DATA = <?php echo json_encode($draftData); ?>;
         var DRAFT_SETTINGS = <?php echo json_encode($draftSettings); ?>;
         var ARCHIVE_ID = <?php echo $archive_id ? $archive_id : 'null'; ?>;
+        var PEJABAT_DATA = <?php echo isset($pejabat) ? json_encode($pejabat) : '[]'; ?>;
     </script>
     
     <style>
@@ -261,19 +266,17 @@
                    <span class="mr-2 px-2 py-0.5 bg-indigo-50 dark:bg-blue-900/30 rounded text-indigo-700 dark:text-blue-300">{{sIndex + 1}}</span> {{ section.section }}
                 </h3>
                 
-                <div class="space-y-4">
+                <div class="space-y-4 mb-6">
                     <div v-for="(field, fIndex) in section.fields" :key="fIndex">
-                        <label class="block text-slate-700 dark:text-gray-300 text-xs font-semibold mb-1">{{ field.label }}</label>
+                        <label v-if="field.type !== 'checkbox'" class="block text-gray-600 dark:text-gray-300 text-xs mb-1 font-medium">{{ field.label }}</label>
                         
-                        <!-- Text Input -->
-                        <input v-if="field.type === 'text'" type="text" v-model="formData[field.variable]" 
-                            class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition shadow-sm">
-                        
-                        <!-- Textarea -->
-                        <textarea v-if="field.type === 'textarea'" v-model="formData[field.variable]" :rows="field.rows || 3"
+                        <!-- Text/Textarea/Number -->
+                        <textarea v-if="['text', 'textarea'].includes(field.type)" v-model="formData[field.variable]" rows="2"
                             class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition shadow-sm"></textarea>
+
+                        <input v-if="field.type === 'number'" type="number" v-model="formData[field.variable]"
+                             class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition shadow-sm">
                         
-                        <!-- Date -->
                         <input v-if="field.type === 'date'" type="date" v-model="formData[field.variable]"
                             class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition shadow-sm">
                             
@@ -311,8 +314,8 @@
 
         <!-- Footer Actions -->
         <div class="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 grid grid-cols-2 gap-3 transition-colors duration-200">
-            <button @click="saveDraft" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded shadow-md font-semibold transition flex items-center justify-center">
-                <i class="fas fa-save mr-2"></i> Save
+            <button @click="saveDraft" :disabled="isSaving" class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 rounded shadow-md font-semibold transition flex items-center justify-center">
+                <i class="fas" :class="isSaving ? 'fa-spinner fa-spin' : 'fa-save'"></i> <span class="ml-2">{{ isSaving ? 'Saving...' : 'Save' }}</span>
             </button>
             <button @click="printPdf" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded shadow-md font-semibold transition flex items-center justify-center">
                 <i class="fas fa-print mr-2"></i> Print

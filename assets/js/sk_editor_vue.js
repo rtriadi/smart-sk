@@ -179,33 +179,22 @@ createApp({
             const minHeight = globalSettings.orientation === 'landscape' ? '210mm' : '297mm';
 
             // Adjust for F4/Legal if needed (simplified for now, can expand)
-            let finalWidth = width;
-            let finalHeight = minHeight;
-
-            if (globalSettings.paperSize === 'F4') {
-                finalWidth = globalSettings.orientation === 'landscape' ? '330mm' : '215mm';
-                finalHeight = globalSettings.orientation === 'landscape' ? '215mm' : '330mm';
-            }
 
             return {
-                width: finalWidth,
-                minHeight: finalHeight,
-                height: 'auto', // Force expansion
-                paddingTop: `${globalSettings.marginTop}mm`,
-                paddingBottom: `${globalSettings.marginBottom}mm`,
-                paddingLeft: `${globalSettings.marginLeft}mm`,
-                paddingRight: `${globalSettings.marginRight}mm`,
+                width: width,
+                minHeight: minHeight,
+                padding: '0'
             };
         });
 
-        // --- Methods ---
         const addRepeaterItem = (variable) => {
             if (!formData[variable]) formData[variable] = [];
-            formData[variable].push('');
+            formData[variable].push(''); // Simply push an empty string or object for now
         };
-
         const removeRepeaterItem = (variable, index) => {
-            formData[variable].splice(index, 1);
+            if (formData[variable]) {
+                formData[variable].splice(index, 1);
+            }
         };
 
         const handleLogoUpload = (event) => {
@@ -219,13 +208,15 @@ createApp({
             }
         };
 
+        const isSaving = ref(false);
+
         const saveDraft = async () => {
+            if (isSaving.value) return;
+            isSaving.value = true;
             try {
                 const response = await fetch(`${siteUrl.value}sk_editor/save`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: new URLSearchParams({
                         data: JSON.stringify(formData),
                         settings: JSON.stringify(globalSettings),
@@ -240,20 +231,23 @@ createApp({
                     res = JSON.parse(text);
                 } catch (e) {
                     console.error('Invalid JSON:', text);
-                    alert('Server Error: ' + text.substring(0, 200));
+                    toastr.error('Server Error: ' + text.substring(0, 50));
                     return;
                 }
 
                 if (res.status === 'success') {
-                    alert(`Draft Saved! ID: ${res.id}`);
+                    toastr.success(`Draft Saved Successfully!`);
                     archiveId.value = res.id;
-                    document.getElementById('btn-print-hidden').dataset.id = res.id;
+                    const printBtn = document.getElementById('btn-print-hidden');
+                    if (printBtn) printBtn.dataset.id = res.id;
                 } else {
-                    alert('Error saving draft: ' + (res.message || 'Unknown error'));
+                    toastr.error('Error saving draft: ' + (res.message || 'Unknown error'));
                 }
             } catch (error) {
                 console.error('Save error:', error);
-                alert('Failed to save draft.');
+                toastr.error('Failed to save draft.');
+            } finally {
+                isSaving.value = false;
             }
         };
 
@@ -506,33 +500,23 @@ createApp({
             }
         };
 
-        return {
-            config,
-            formData,
-            globalSettings,
-            isDarkMode,
-            toggleTheme,
-            previewHtml,
-            paperStyle,
-            addRepeaterItem,
-            removeRepeaterItem,
-            handleLogoUpload,
-            saveDraft,
-            printPdf,
-            exportWord,
-            exportPdf,
-            fixAutoFormatting
+        // Pejabat Logic
+        const pejabatList = ref(typeof PEJABAT_DATA !== 'undefined' ? PEJABAT_DATA : []);
+        const onPejabatChange = (event) => {
+            const selectedName = event.target.value;
+            const pejabat = pejabatList.value.find(p => p.nama === selectedName);
+            if (pejabat) {
+                if (typeof formData.nip_penandatangan !== 'undefined') {
+                    formData.nip_penandatangan = pejabat.nip;
+                }
+                if (typeof formData.jabatan_penandatangan !== 'undefined') {
+                    formData.jabatan_penandatangan = pejabat.jabatan;
+                }
+            }
         };
-    },
-    mounted() {
-        // Initial pagination
-        this.$nextTick(() => {
-            this.fixAutoFormatting();
-            this.paginate();
-        });
-    },
-    methods: {
-        paginate() {
+
+
+        const paginate = () => {
             const rawContainer = document.getElementById('raw-content');
             const outputContainer = document.getElementById('pagination-container');
             if (!rawContainer || !outputContainer) return;
@@ -549,21 +533,21 @@ createApp({
             let pageHeightMm = 297; // Default A4
             let pageWidthMm = 210;
 
-            if (this.globalSettings.paperSize === 'F4') {
+            if (globalSettings.paperSize === 'F4') {
                 pageHeightMm = 330; pageWidthMm = 215;
             }
 
-            if (this.globalSettings.orientation === 'landscape') {
+            if (globalSettings.orientation === 'landscape') {
                 [pageHeightMm, pageWidthMm] = [pageWidthMm, pageHeightMm];
             }
 
             const pageHeightPx = pageHeightMm * mmToPx;
             const pageWidthPx = pageWidthMm * mmToPx;
 
-            const marginTopPx = (this.globalSettings.marginTop || 20) * mmToPx;
-            const marginBottomPx = (this.globalSettings.marginBottom || 20) * mmToPx;
-            // Left/Right margin usage depends on implementation. 
-            // Here we mainly care about vertical overflow so we track height.
+            const marginTopPx = (globalSettings.marginTop || 20) * mmToPx;
+            const marginBottomPx = (globalSettings.marginBottom || 20) * mmToPx;
+            const marginLeftPx = (globalSettings.marginLeft || 25) * mmToPx;
+            const marginRightPx = (globalSettings.marginRight || 20) * mmToPx;
 
             const contentHeightPx = pageHeightPx - marginTopPx - marginBottomPx;
 
@@ -573,7 +557,7 @@ createApp({
                 page.className = 'paper-page bg-white shadow-lg relative';
                 page.style.width = `${pageWidthMm}mm`;
                 page.style.height = `${pageHeightMm}mm`;
-                page.style.padding = `${this.globalSettings.marginTop}mm ${this.globalSettings.marginRight}mm ${this.globalSettings.marginBottom}mm ${this.globalSettings.marginLeft}mm`;
+                page.style.padding = `${globalSettings.marginTop}mm ${globalSettings.marginRight}mm ${globalSettings.marginBottom}mm ${globalSettings.marginLeft}mm`;
                 page.style.boxSizing = 'border-box';
                 page.style.overflow = 'hidden'; // Hide overflow
                 page.dataset.pageNum = pageNum;
@@ -601,7 +585,7 @@ createApp({
 
                 // Temporarily append to check height
                 currentPageContent.appendChild(node);
-                const nodeHeight = node.offsetHeight || 0; // Text nodes might need wrapping to measure, but usually they are inside blocks
+                const nodeHeight = node.offsetHeight || 0;
 
                 // Check if node fits
                 if (currentHeight + nodeHeight > contentHeightPx) {
@@ -620,18 +604,49 @@ createApp({
                     currentHeight += nodeHeight;
                 }
             });
-        }
-    },
-    watch: {
-        previewHtml() {
-            this.$nextTick(() => {
-                this.fixAutoFormatting();
-                this.paginate();
+        };
+
+        // Watchers for Paging
+        watch(previewHtml, () => {
+            Vue.nextTick(() => {
+                fixAutoFormatting();
+                paginate();
             });
-        },
-        'globalSettings.paperSize'() { this.$nextTick(this.paginate); },
-        'globalSettings.orientation'() { this.$nextTick(this.paginate); },
-        'globalSettings.marginTop'() { this.$nextTick(this.paginate); },
-        'globalSettings.marginBottom'() { this.$nextTick(this.paginate); }
+        });
+
+        watch(() => globalSettings.paperSize, () => Vue.nextTick(paginate));
+        watch(() => globalSettings.orientation, () => Vue.nextTick(paginate));
+        watch(() => globalSettings.marginTop, () => Vue.nextTick(paginate));
+        watch(() => globalSettings.marginBottom, () => Vue.nextTick(paginate));
+
+        // Initial Pagination
+        onMounted(() => {
+            Vue.nextTick(() => {
+                fixAutoFormatting();
+                paginate();
+            });
+        });
+
+        return {
+            config,
+            formData,
+            globalSettings,
+            isDarkMode,
+            toggleTheme,
+            previewHtml,
+            paperStyle,
+            addRepeaterItem,
+            removeRepeaterItem,
+            handleLogoUpload,
+            saveDraft,
+            isSaving,
+            printPdf,
+            exportWord,
+            exportPdf,
+            fixAutoFormatting,
+            pejabatList,
+            onPejabatChange,
+            paginate
+        };
     }
 }).mount('#app');

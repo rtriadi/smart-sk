@@ -40,46 +40,58 @@ class Sk_editor extends CI_Controller {
                 $file = FCPATH . 'vendor/phenx/php-svg-lib/src/' . str_replace('\\', '/', $class) . '.php';
                 if (file_exists($file)) require_once $file;
             }
-            if (strpos($class, 'Masterminds\\') === 0) {
-                $file = FCPATH . 'vendor/masterminds/html5/src/' . str_replace('\\', '/', substr($class, 12)) . '.php';
-                if (file_exists($file)) {
-                    require_once $file;
-                    return;
-                }
-            }
         });
 
+        check_not_login(); // Enforce Auth
         $this->load->model('Template_model');
         $this->load->model('Archive_model');
+        $this->load->model('Pejabat_model');
         $this->load->helper('url');
+        $this->load->helper('form');
+        $this->load->library('session');
     }
 
     public function index() {
-        // List available templates to start from
+        $data['archives'] = $this->Archive_model->get_all_archives();
         $data['templates'] = $this->Template_model->get_all_templates();
         $this->load->view('sk_editor/dashboard', $data);
     }
 
+    public function settings() {
+        $data['pejabat'] = $this->Pejabat_model->get_all();
+        $this->load->view('sk_editor/settings_view', $data);
+    }
+
+    public function save_pejabat() {
+        $data = $this->input->post();
+        if (isset($data['id']) && $data['id']) {
+            $this->Pejabat_model->update($data['id'], $data);
+        } else {
+            $this->Pejabat_model->insert($data);
+        }
+        redirect('sk_editor/settings');
+    }
+
+    public function delete_pejabat($id) {
+        $this->Pejabat_model->delete($id);
+        redirect('sk_editor/settings');
+    }
+
     public function archives() {
-        // List all saved drafts
-        $data['archives'] = $this->db->select('tb_sk_archives.*, tb_templates.nama_sk')
-                                     ->from('tb_sk_archives')
-                                     ->join('tb_templates', 'tb_sk_archives.template_id = tb_templates.id')
-                                     ->order_by('created_at', 'DESC')
-                                     ->get()
-                                     ->result();
+        $data['archives'] = $this->Archive_model->get_all_archives();
         $this->load->view('sk_editor/archive_view', $data);
     }
 
     public function create($template_id) {
-        $data['template'] = $this->Template_model->get_template_by_id($template_id);
-        if (!$data['template']) {
-            // Template not found, redirect to dashboard
+        $template = $this->Template_model->get_template_by_id($template_id);
+        if (!$template) {
             redirect('sk_editor');
             return;
         }
+        $data['template'] = $template;
         $data['draft_data'] = null;
         $data['archive_id'] = null;
+        $data['pejabat'] = $this->Pejabat_model->get_active(); // Pass active pejabat
         $this->load->view('sk_editor/editor_view', $data);
     }
 
@@ -91,6 +103,7 @@ class Sk_editor extends CI_Controller {
         $data['draft_data'] = $archive->input_data_json;
         $data['draft_settings'] = $archive->settings_json; // Pass settings
         $data['archive_id'] = $archive->id;
+        $data['pejabat'] = $this->Pejabat_model->get_active(); // Pass active pejabat
         
         $this->load->view('sk_editor/editor_view', $data);
     }
@@ -119,11 +132,13 @@ class Sk_editor extends CI_Controller {
         } else {
             // Create new
             $no_surat = 'DRAFT-' . date('YmdHis');
+            $user_id = $this->session->userdata('id_user') ? $this->session->userdata('id_user') : 0;
+            
             $save_data = [
                 'template_id' => $template_id,
                 'input_data_json' => $input_data,
                 'settings_json' => $settings_json,
-                'created_by' => 'User', // Replace with session user
+                'created_by' => $user_id,
                 'no_surat' => $no_surat
             ];
             
@@ -133,6 +148,42 @@ class Sk_editor extends CI_Controller {
                 echo json_encode(['status' => 'error']);
             }
         }
+    }
+
+    public function clone_draft($archive_id) {
+        $archive = $this->Archive_model->get_archive_by_id($archive_id);
+        if (!$archive) show_404();
+
+        // Prepare new data
+        $new_data = [
+            'template_id' => $archive->template_id,
+            'input_data_json' => $archive->input_data_json,
+            'settings_json' => $archive->settings_json,
+            'created_by' => $archive->created_by,
+            'no_surat' => $archive->no_surat . ' (Copy)',
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+
+        if ($this->Archive_model->create_archive($new_data)) {
+            // Redirect to archives with success message if possible, or just redirect
+            redirect('sk_editor/archives');
+        } else {
+            show_error('Failed to clone draft.');
+        }
+    }
+
+    public function rename_draft() {
+        // AJAX Handler
+        $id = $this->input->post('id');
+        $new_name = $this->input->post('name');
+        
+        if (!$id || !$new_name) {
+             echo json_encode(['status' => 'error', 'message' => 'Invalid data']);
+             return;
+        }
+
+        $this->Archive_model->update_archive($id, ['no_surat' => $new_name]);
+        echo json_encode(['status' => 'success']);
     }
 
     public function generate_pdf($archive_id) {

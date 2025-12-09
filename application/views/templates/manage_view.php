@@ -28,6 +28,10 @@
     </script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Toastr & jQuery -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <!-- Vue 3 (CDN) -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
@@ -46,8 +50,8 @@
     <!-- Header -->
     <div class="flex justify-between items-center mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 transition-colors duration-200">
         <div class="flex items-center">
-            <a :href="dashboardUrl()" class="text-gray-400 hover:text-indigo-600 dark:hover:text-white mr-4 transition" title="Back to Dashboard">
-                <i class="fas fa-arrow-left text-xl"></i>
+            <a :href="dashboardUrl()" class="text-gray-500 hover:text-indigo-600 dark:hover:text-white mr-4 transition flex items-center font-medium" title="Back to Dashboard">
+                <i class="fas fa-arrow-left mr-2"></i> Templates
             </a>
             <div>
                 <h1 class="text-2xl font-bold text-slate-800 dark:text-white transition-colors duration-200">Template Manager</h1>
@@ -59,10 +63,10 @@
             <button @click="toggleTheme" class="w-10 h-10 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-yellow-400 shadow-sm transition flex items-center justify-center mr-2" title="Toggle Theme">
                 <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
             </button>
-
-            <a :href="settingsUrl()" class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-4 py-2 rounded shadow-sm transition flex items-center font-medium">
-                <i class="fas fa-cog mr-2"></i> Global Settings
+            <a href="<?php echo site_url('auth/logout'); ?>" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow-md transition flex items-center font-medium mr-2" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
             </a>
+
             <a :href="createUrl()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow-md font-semibold transition flex items-center">
                 <i class="fas fa-plus mr-2"></i> Add New Template
             </a>

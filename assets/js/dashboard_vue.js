@@ -45,7 +45,7 @@ createApp({
         };
 
         const manageUrl = () => {
-            return `${siteUrl.value}templates`;
+            return `${siteUrl.value}sk_editor/settings`;
         };
 
         return {

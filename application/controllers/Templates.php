@@ -5,6 +5,7 @@ class Templates extends CI_Controller {
 
     public function __construct() {
         parent::__construct();
+        check_not_login();
         $this->load->model('Template_model');
         $this->load->helper('url');
         $this->load->helper('form');

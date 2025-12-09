@@ -24,7 +24,8 @@ class Auth extends CI_Controller
                 if ($password == $user['password']) {
                     // Jika password cocok, simpan sesi pengguna dan arahkan ke halaman dashboard atau halaman setelah login berhasil
                     $this->session->set_userdata('id_user', $user['id_user']);
-                    redirect('dashboard'); // Ganti 'dashboard' dengan halaman setelah login berhasil
+                    $this->session->set_userdata('nama_pengguna', $user['nama_pengguna']); // Optional: Save name
+                    redirect('sk_editor'); // Redirect to main app
                 } else {
                     // Password salah
                     $this->session->set_flashdata('error', 'Password salah');

@@ -28,6 +28,10 @@
     </script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Toastr & jQuery -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <!-- Vue 3 (CDN) -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
@@ -60,11 +64,17 @@
                 <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
             </button>
 
+            <a href="<?php echo site_url('templates'); ?>" class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-4 py-2 rounded shadow-sm transition flex items-center font-medium">
+                <i class="fas fa-layer-group mr-2"></i> Templates
+            </a>
             <a :href="manageUrl()" class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-4 py-2 rounded shadow-sm transition flex items-center font-medium">
-                <i class="fas fa-cog mr-2"></i> Manage
+                <i class="fas fa-cog mr-2"></i> Settings
             </a>
             <a href="<?php echo site_url('sk_editor/archives'); ?>" class="bg-indigo-600 hover:bg-indigo-700 dark:bg-green-700 dark:hover:bg-green-600 text-white px-4 py-2 rounded shadow-md transition flex items-center font-medium">
                 <i class="fas fa-archive mr-2"></i> Saved Drafts
+            </a>
+            <a href="<?php echo site_url('auth/logout'); ?>" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow-md transition flex items-center font-medium" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
             </a>
         </div>
     </div>
