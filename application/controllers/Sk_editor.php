@@ -58,6 +58,8 @@ class Sk_editor extends CI_Controller {
     }
 
     public function settings() {
+        $this->load->model('Category_model');
+        $data['categories'] = $this->Category_model->get_all();
         $data['pejabat'] = $this->Pejabat_model->get_all();
         $this->load->view('sk_editor/settings_view', $data);
     }
@@ -74,6 +76,29 @@ class Sk_editor extends CI_Controller {
 
     public function delete_pejabat($id) {
         $this->Pejabat_model->delete($id);
+        redirect('sk_editor/settings');
+    }
+
+    public function set_default_pejabat($id) {
+        $this->Pejabat_model->set_default($id);
+        redirect('sk_editor/settings');
+    }
+    
+    // Category CRUD
+    public function save_category() {
+        $data = $this->input->post();
+        $this->load->model('Category_model');
+        if (isset($data['id']) && $data['id']) {
+            $this->Category_model->update($data['id'], $data);
+        } else {
+            $this->Category_model->insert($data);
+        }
+        redirect('sk_editor/settings');
+    }
+
+    public function delete_category($id) {
+        $this->load->model('Category_model');
+        $this->Category_model->delete($id);
         redirect('sk_editor/settings');
     }
 
@@ -115,7 +140,28 @@ class Sk_editor extends CI_Controller {
         $template_id = $this->input->post('template_id');
         $archive_id = $this->input->post('archive_id');
         
-        if ($archive_id) {
+        // Check for oversized payload or empty post
+        if (empty($input_data) && empty($settings_json)) {
+             $logMsg = date('Y-m-d H:i:s') . " - Empty payload. POST: " . print_r($_POST, true) . "\n";
+             @file_put_contents('debug_sk_save.txt', $logMsg, FILE_APPEND);
+             
+             echo json_encode(['status' => 'error', 'message' => 'No data received. Payload might be too large (max post size exceeded).']);
+             return;
+        }
+        
+        // Check for excessively large payload (likely uncompressed image) to prevent DB crash
+        // Check for excessively large payload (likely uncompressed image) to prevent DB crash (max_allowed_packet is 1MB)
+        if (strlen($input_data) > 950000) { // Limit to ~950KB to be safe below 1MB default
+             $sizeMB = round(strlen($input_data) / 1048576, 2);
+             @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Payload too large: {$sizeMB}MB. Rejecting to prevent crash.\n", FILE_APPEND);
+             echo json_encode(['status' => 'error', 'message' => "Data too large ({$sizeMB}MB). Server limit is 1MB. Please use a smaller logo or ask admin to increase 'max_allowed_packet'."]);
+             return;
+        }
+        
+        @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Payload received.\n", FILE_APPEND);
+
+        if ($archive_id && $archive_id !== 'null') {
+            @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Updating ID: $archive_id\n", FILE_APPEND);
             // Update existing
             $update_data = [
                 'input_data_json' => $input_data,
@@ -124,12 +170,15 @@ class Sk_editor extends CI_Controller {
             ];
             $this->db->where('id', $archive_id);
             if ($this->db->update('tb_sk_archives', $update_data)) {
+                 @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Update Success\n", FILE_APPEND);
                 echo json_encode(['status' => 'success', 'id' => $archive_id]);
             } else {
                 $error = $this->db->error();
+                 @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Update Failed: " . $error['message'] . "\n", FILE_APPEND);
                 echo json_encode(['status' => 'error', 'message' => $error['message']]);
             }
         } else {
+             @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Creating New\n", FILE_APPEND);
             // Create new
             $no_surat = 'DRAFT-' . date('YmdHis');
             $user_id = $this->session->userdata('id_user') ? $this->session->userdata('id_user') : 0;
@@ -142,10 +191,16 @@ class Sk_editor extends CI_Controller {
                 'no_surat' => $no_surat
             ];
             
+            @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Data prepared: " . print_r($save_data, true) . "\n", FILE_APPEND);
+
             if ($this->Archive_model->create_archive($save_data)) {
-                echo json_encode(['status' => 'success', 'id' => $this->db->insert_id()]);
+                 $new_id = $this->db->insert_id();
+                 @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Create Success ID: $new_id\n", FILE_APPEND);
+                echo json_encode(['status' => 'success', 'id' => $new_id]);
             } else {
-                echo json_encode(['status' => 'error']);
+                $error = $this->db->error();
+                 @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Create Failed: " . $error['message'] . "\n", FILE_APPEND);
+                echo json_encode(['status' => 'error', 'message' => $error['message']]);
             }
         }
     }

@@ -190,8 +190,11 @@ createApp({
 
         const cancelUrl = () => `${siteUrl.value}templates`;
 
+        const categories = ref(window.CATEGORIES || []);
+
         return {
             form,
+            categories,
             saveTemplate,
             cancelUrl,
             isEdit

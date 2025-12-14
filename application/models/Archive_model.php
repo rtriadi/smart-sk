@@ -17,7 +17,14 @@ class Archive_model extends CI_Model {
     }
 
     public function create_archive($data) {
-        return $this->db->insert('tb_sk_archives', $data);
+        @file_put_contents(FCPATH . 'debug_sk_save.txt', date('Y-m-d H:i:s') . " - Model: create_archive called\n", FILE_APPEND);
+        $res = $this->db->insert('tb_sk_archives', $data);
+        @file_put_contents(FCPATH . 'debug_sk_save.txt', date('Y-m-d H:i:s') . " - Model: insert result: " . ($res ? 'TRUE' : 'FALSE') . "\n", FILE_APPEND);
+        if (!$res) {
+             $error = $this->db->error();
+             @file_put_contents(FCPATH . 'debug_sk_save.txt', date('Y-m-d H:i:s') . " - Model: DB Error: " . print_r($error, true) . "\n", FILE_APPEND);
+        }
+        return $res;
     }
 
     public function update_archive($id, $data) {

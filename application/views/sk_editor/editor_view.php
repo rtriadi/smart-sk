@@ -49,6 +49,7 @@
         
         var TEMPLATE_CONFIG = <?php echo json_encode($config); ?>;
         var TEMPLATE_HTML = <?php echo json_encode($template->html_pattern); ?>;
+        var TEMPLATE_PATTERN = <?php echo json_encode($template->nomor_pattern); ?>;
         var SITE_URL = '<?php echo rtrim(site_url(), "/") . "/"; ?>';
         var TEMPLATE_ID = <?php echo $template->id; ?>;
         var DRAFT_DATA = <?php echo json_encode($draftData); ?>;
@@ -396,7 +397,7 @@
                 </h3>
                 <div class="mb-2">
                     <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1 font-medium">Pilih Pejabat</label>
-                    <select @change="onPejabatSelect($event)" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors">
+                    <select v-model="selectedPejabatId" @change="onPejabatSelect($event)" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors">
                         <option value="">-- Pilih --</option>
                         <option v-for="p in pejabatList" :key="p.id" :value="p.id">{{ p.nama }} ({{ p.jabatan }})</option>
                     </select>

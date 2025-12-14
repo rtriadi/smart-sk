@@ -7,6 +7,7 @@ class Templates extends CI_Controller {
         parent::__construct();
         check_not_login();
         $this->load->model('Template_model');
+        $this->load->model('Category_model');
         $this->load->helper('url');
         $this->load->helper('form');
         $this->load->library('form_validation');
@@ -22,7 +23,8 @@ class Templates extends CI_Controller {
         $this->form_validation->set_rules('kategori', 'Kategori', 'required');
 
         if ($this->form_validation->run() === FALSE) {
-            $this->load->view('templates/create_view');
+            $data['categories'] = $this->Category_model->get_all();
+            $this->load->view('templates/create_view', $data);
         } else {
             $data = [
                 'nama_sk' => $this->input->post('nama_sk'),
@@ -42,6 +44,7 @@ class Templates extends CI_Controller {
         $this->form_validation->set_rules('nama_sk', 'Nama SK', 'required');
 
         if ($this->form_validation->run() === FALSE) {
+            $data['categories'] = $this->Category_model->get_all();
             $this->load->view('templates/edit_view', $data);
         } else {
              $update_data = [

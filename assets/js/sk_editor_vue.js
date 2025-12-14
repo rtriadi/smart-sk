@@ -35,6 +35,7 @@ createApp({
             fontSize: '12pt',
             lineHeight: '1.5',
             // Kop Surat Fields
+            // Kop Surat Fields
             kopLogo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Logo_of_the_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg/1200px-Logo_of_the_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg.png',
             kopTitle1: 'MAHKAMAH AGUNG REPUBLIK INDONESIA',
             kopTitle2: 'DIREKTORAT JENDERAL BADAN PERADILAN AGAMA',
@@ -42,11 +43,45 @@ createApp({
             kopTitle4: 'PENGADILAN AGAMA GORONTALO',
             kopAddress: 'Jalan Achmad Nadjamuddin No.22, Dulalowo Timur, Kecamatan Kota Tengah\nKota Gorontalo, 96138. www.pa-gorontalo.go.id, surat@pa-gorontalo.go.id',
             kopLogoWidth: 100, // Default width in px
-            showPageNumbers: false // Page Numbering Toggle
+            showPageNumbers: false, // Page Numbering Toggle
+            defaultSkLogo: ''
         });
 
         // Theme Logic
         const isDarkMode = ref(localStorage.getItem('sk_editor_theme') === 'dark');
+
+        const selectedPejabatId = ref('');
+
+        // Helper to set pejabat
+        const setPejabat = (id) => {
+            selectedPejabatId.value = id; // Sync dropdown
+            const p = pejabatList.value.find(x => x.id == id);
+            if (p) {
+                // Determine full title
+                let jabatanFull = p.jabatan;
+
+                // Map short names to long names (Legacy Support / Consistency)
+                const titles = {
+                    'Ketua': 'KETUA PENGADILAN AGAMA GORONTALO',
+                    'Wakil Ketua': 'WAKIL KETUA PENGADILAN AGAMA GORONTALO',
+                    'Panitera': 'PANITERA PENGADILAN AGAMA GORONTALO',
+                    'Sekretaris': 'SEKRETARIS PENGADILAN AGAMA GORONTALO'
+                };
+
+                // Flexible Match (Case insensitive check if direct match fails)
+                if (titles[p.jabatan]) {
+                    jabatanFull = titles[p.jabatan];
+                } else {
+                    // Try finding key case-insensitive
+                    const key = Object.keys(titles).find(k => k.toLowerCase() === p.jabatan.toLowerCase());
+                    if (key) jabatanFull = titles[key];
+                }
+
+                formData.nama_penandatangan = p.nama;
+                formData.nip_penandatangan = p.nip;
+                formData.jabatan_penandatangan = jabatanFull;
+            }
+        };
 
         // --- Initialization ---
         onMounted(() => {
@@ -62,6 +97,9 @@ createApp({
                 section.fields.forEach(field => {
                     if (field.type === 'repeater') {
                         formData[field.variable] = [];
+                    } else if (field.variable === 'no_sk' && typeof TEMPLATE_PATTERN !== 'undefined' && TEMPLATE_PATTERN) {
+                        // Prefer the database pattern for the letter number
+                        formData[field.variable] = TEMPLATE_PATTERN;
                     } else {
                         formData[field.variable] = field.default || '';
                     }
@@ -78,6 +116,24 @@ createApp({
                 // Only overwrite fields that exist in DRAFT_DATA
                 // This preserves new fields that might not be in the draft
                 Object.assign(formData, DRAFT_DATA);
+
+                // EDIT MODE: Restore Signatory Dropdown Selection
+                if (formData.nip_penandatangan) {
+                    const match = pejabatList.value.find(p => p.nip == formData.nip_penandatangan);
+                    if (match) selectedPejabatId.value = match.id;
+                } else if (formData.nama_penandatangan) {
+                    // Fallback to name match
+                    const match = pejabatList.value.find(p => p.nama == formData.nama_penandatangan);
+                    if (match) selectedPejabatId.value = match.id;
+                }
+            } else {
+                // NEW DRAFT: Attempt to set Default Pejabat (Active & Default=1)
+                const defaultPejabat = pejabatList.value.find(p => p.is_default == 1);
+                if (defaultPejabat) {
+                    // Force update
+                    setPejabat(defaultPejabat.id);
+                    selectedPejabatId.value = defaultPejabat.id;
+                }
             }
 
             // Load Global Settings
@@ -86,7 +142,16 @@ createApp({
             } else {
                 const savedSettings = localStorage.getItem('sk_editor_settings');
                 if (savedSettings) {
-                    Object.assign(globalSettings, JSON.parse(savedSettings));
+                    try {
+                        const parsed = JSON.parse(savedSettings);
+                        Object.assign(globalSettings, parsed);
+
+                        // Apply Default SK Logo if new draft (no existing SK Logo)
+                        if (!DRAFT_DATA && parsed.defaultSkLogo && !formData.skContentLogo) {
+                            formData.skContentLogo = parsed.defaultSkLogo;
+                            if (!formData.skContentLogoWidth) formData.skContentLogoWidth = 100;
+                        }
+                    } catch (e) { console.error(e); }
                 }
             }
         });
@@ -104,30 +169,7 @@ createApp({
 
         // 1. Signatory Logic
         const onPejabatSelect = (event) => {
-            const selectedId = event.target.value;
-            const pejabat = pejabatList.value.find(p => p.id == selectedId);
-
-            if (pejabat) {
-                // Determine full title if needed, or use DB value directly
-                // Ideally DB should hold full title. for now we map if simple.
-                let jabatanFull = pejabat.jabatan;
-
-                // Optional: Map short names to long names if DB has short names (Legacy Support)
-                // If DB has "Ketua", map to full title. If DB has full title, keep it.
-                const titles = {
-                    'Ketua': 'KETUA PENGADILAN AGAMA GORONTALO',
-                    'Wakil Ketua': 'WAKIL KETUA PENGADILAN AGAMA GORONTALO',
-                    'Panitera': 'PANITERA PENGADILAN AGAMA GORONTALO',
-                    'Sekretaris': 'SEKRETARIS PENGADILAN AGAMA GORONTALO'
-                };
-                if (titles[pejabat.jabatan]) {
-                    jabatanFull = titles[pejabat.jabatan];
-                }
-
-                formData.nama_penandatangan = pejabat.nama;
-                formData.nip_penandatangan = pejabat.nip;
-                formData.jabatan_penandatangan = jabatanFull;
-            }
+            setPejabat(event.target.value);
         };
 
         // 2. Date Logic (Indo + Hijri)
@@ -369,63 +411,137 @@ createApp({
             }, 100);
         };
 
+        const compressImage = (file, maxWidth, maxHeight, quality, callback) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height *= maxWidth / width;
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width *= maxHeight / height;
+                            height = maxHeight;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Try WebP first for best compression with transparency support
+                    let dataUrl = canvas.toDataURL('image/webp', quality);
+
+                    // Fallback or Check Size. If browser defaults to PNG (no WebP support), length might be large.
+                    // If > 200KB, try reducing dimensions or quality further? 
+                    // Note: toDataURL('image/png') ignores quality argument.
+
+                    if (dataUrl.length > 500000) { // If still > 500KB (rare for 300px)
+                        // Try JPEG if transparency not critical? No, keep transparency.
+                        // Force smaller scale
+                        const scale = 0.7;
+                        canvas.width = width * scale;
+                        canvas.height = height * scale;
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        dataUrl = canvas.toDataURL('image/webp', quality);
+                    }
+
+                    callback(dataUrl);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
         const handleLogoUpload = (event) => {
             const file = event.target.files[0];
             if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    // Save to SK Draft specific field
-                    formData.skLogo = e.target.result;
-                    // Initialize width if not present
-                    if (!formData.skLogoWidth) formData.skLogoWidth = globalSettings.kopLogoWidth;
-                };
-                reader.readAsDataURL(file);
+                // Compress to 300x300, 0.7 quality
+                compressImage(file, 300, 300, 0.7, (dataUrl) => {
+                    formData.skLogo = dataUrl;
+                    if (!formData.skLogoWidth) formData.skLogoWidth = globalSettings.kopLogoWidth || 100;
+
+                    // Reset input
+                    event.target.value = '';
+                });
             }
         };
 
         const handleContentLogoUpload = (event) => {
             const file = event.target.files[0];
             if (file) {
-                // Resize Image Logic to prevent Server Error (Payload too large)
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
+                // Compress to 300x300, 0.7 quality
+                compressImage(file, 300, 300, 0.7, (dataUrl) => {
+                    formData.skContentLogo = dataUrl;
+                    if (!formData.skContentLogoWidth) formData.skContentLogoWidth = 100;
 
-                        // Max dimensions
-                        const MAX_WIDTH = 500;
-                        const MAX_HEIGHT = 500;
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > height) {
-                            if (width > MAX_WIDTH) {
-                                height *= MAX_WIDTH / width;
-                                width = MAX_WIDTH;
-                            }
-                        } else {
-                            if (height > MAX_HEIGHT) {
-                                width *= MAX_HEIGHT / height;
-                                height = MAX_HEIGHT;
-                            }
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
-                        ctx.drawImage(img, 0, 0, width, height);
-
-                        // Compress to PNG (Preserve Transparency)
-                        formData.skContentLogo = canvas.toDataURL('image/png');
-                        if (!formData.skContentLogoWidth) formData.skContentLogoWidth = 100; // Default 100px
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
+                    // Reset input
+                    event.target.value = '';
+                });
             }
         };
 
+
+        const recompressBase64 = (base64, maxWidth, maxHeight, quality) => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height *= maxWidth / width;
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width *= maxHeight / height;
+                            height = maxHeight;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Force WebP
+                    const newDataUrl = canvas.toDataURL('image/webp', quality);
+                    resolve(newDataUrl);
+                };
+                img.onerror = () => resolve(base64); // Return original on error
+                img.src = base64;
+            });
+        };
+
+        const sanitizeGlobalSettings = async () => {
+            // 1. Check Kop Logo (Threshold: 500KB)
+            if (globalSettings.kopLogo && globalSettings.kopLogo.length > 500000) {
+                // It's too big, recompress!
+                toastr.info("Optimizing Global Logo...", { timeOut: 2000 });
+                globalSettings.kopLogo = await recompressBase64(globalSettings.kopLogo, 800, 400, 0.7);
+
+                // Update LocalStorage too to fix it for future
+                localStorage.setItem('sk_editor_settings', JSON.stringify(globalSettings));
+            }
+
+            // 2. Check Default Content Logo
+            if (globalSettings.defaultSkLogo && globalSettings.defaultSkLogo.length > 500000) {
+                toastr.info("Optimizing Default SK Logo...", { timeOut: 2000 });
+                globalSettings.defaultSkLogo = await recompressBase64(globalSettings.defaultSkLogo, 300, 300, 0.7);
+                localStorage.setItem('sk_editor_settings', JSON.stringify(globalSettings));
+            }
+        };
 
         const isSaving = ref(false);
 
@@ -433,6 +549,18 @@ createApp({
             if (isSaving.value) return;
             isSaving.value = true;
             try {
+                // Sanitize Global Settings First (Fix large LocalStorage images)
+                await sanitizeGlobalSettings();
+
+                // Check payload size client-side first
+                const payloadSize = new Blob([JSON.stringify(formData) + JSON.stringify(globalSettings)]).size;
+                if (payloadSize > 950000) {
+                    const sizeMB = (payloadSize / 1024 / 1024).toFixed(2);
+                    toastr.error(`Data too large (${sizeMB}MB). Limit is ~0.95MB. Please compress images or ask admin to increase 'max_allowed_packet'.`);
+                    isSaving.value = false;
+                    return;
+                }
+
                 const response = await fetch(`${siteUrl.value}sk_editor/save`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -904,18 +1032,14 @@ createApp({
             addRepeaterItem,
             removeRepeaterItem,
             addAttachment,
-            removeAttachment,
-            handleLogoUpload,
-            handleContentLogoUpload,
-            saveDraft,
-            isSaving,
             printPdf,
             exportWord,
             exportPdf,
             fixAutoFormatting,
             pejabatList,
             onPejabatSelect,
-            paginate
+            paginate,
+            selectedPejabatId
         };
     }
 }).mount('#app');

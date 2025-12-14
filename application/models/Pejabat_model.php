@@ -13,7 +13,18 @@ class Pejabat_model extends CI_Model {
     }
 
     public function get_active() {
+        $this->db->order_by('is_default', 'DESC');
+        $this->db->order_by('nama', 'ASC');
         return $this->db->get_where('tb_pejabat', ['status' => 'aktif'])->result();
+    }
+
+    public function set_default($id) {
+        // Reset all to 0
+        $this->db->update('tb_pejabat', ['is_default' => 0]);
+        
+        // Set selected to 1
+        $this->db->where('id', $id);
+        return $this->db->update('tb_pejabat', ['is_default' => 1]);
     }
 
     public function get_by_id($id) {

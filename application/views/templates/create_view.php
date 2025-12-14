@@ -16,6 +16,7 @@
 
     <script>
         var TEMPLATE_DATA = {}; // Empty for create
+        var CATEGORIES = <?php echo json_encode($categories); ?>;
         var SITE_URL = '<?php echo site_url(); ?>';
         var IS_EDIT = false;
     </script>
@@ -58,8 +59,8 @@
                 <div class="mb-4">
                     <label class="block text-gray-400 text-sm font-bold mb-2">Kategori</label>
                     <select v-model="form.kategori" class="w-full bg-gray-900 border border-gray-600 text-white rounded px-3 py-2 focus:border-blue-500 outline-none transition">
-                        <option value="kepegawaian">Kepegawaian</option>
-                        <option value="ortala">Ortala</option>
+                        <option value="" disabled>Select Category</option>
+                        <option v-for="c in categories" :key="c.id" :value="c.category_name">{{ c.category_name }}</option>
                     </select>
                 </div>
 
