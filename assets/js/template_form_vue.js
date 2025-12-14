@@ -3,6 +3,8 @@ const { createApp, ref, onMounted } = Vue;
 createApp({
     setup() {
         // State
+        const showHelp = ref(false);
+
         const form = ref({
             nama_sk: TEMPLATE_DATA.nama_sk || '',
             kategori: TEMPLATE_DATA.kategori || 'kepegawaian',
@@ -197,7 +199,8 @@ createApp({
             categories,
             saveTemplate,
             cancelUrl,
-            isEdit
+            isEdit,
+            showHelp
         };
     }
 }).mount('#app');

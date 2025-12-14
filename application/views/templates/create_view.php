@@ -39,6 +39,9 @@
         </div>
         <div class="flex gap-3">
             <a :href="cancelUrl()" class="px-4 py-2 rounded text-gray-300 hover:bg-gray-800 transition">Cancel</a>
+            <button @click="showHelp = true" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded font-bold transition flex items-center mr-2">
+                <i class="fas fa-question-circle mr-2"></i> Panduan
+            </button>
             <button @click="saveTemplate" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded font-bold transition flex items-center">
                 <i class="fas fa-save mr-2"></i> Save Template
             </button>
@@ -93,7 +96,158 @@
         </div>
     </div>
 
+    <!-- Help Modal -->
+    <div v-if="showHelp" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" @click.self="showHelp = false">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-gray-700">
+            <div class="flex justify-between items-center p-6 border-b border-gray-700">
+                <h2 class="text-2xl font-bold text-white">Panduan Pembuatan Template SK</h2>
+                <button @click="showHelp = false" class="text-gray-400 hover:text-white text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto space-y-8 text-gray-300" v-pre>
+                
+                <!-- Section 1: Konsep Dasar -->
+                <div>
+                    <h3 class="text-xl font-bold text-blue-400 mb-2">1. Konsep Dasar</h3>
+                    <p class="mb-2">Pembuatan template terdiri dari dua bagian yang saling terhubung:</p>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>Form Config (JSON):</strong> Mendefinisikan inputan apa saja yang akan muncul di form pengisian (sebelah kiri editor). Setiap field memiliki <code>variable</code>.</li>
+                        <li><strong>HTML Pattern:</strong> Desain tampilan surat. Gunakan <code>{{variable}}</code> untuk menampilkan data dari form ke dalam surat.</li>
+                    </ul>
+                </div>
+
+                <!-- Section 2: JSON Config -->
+                <div>
+                    <h3 class="text-xl font-bold text-yellow-400 mb-2">2. Struktur JSON Config</h3>
+                    <p class="mb-2">Format JSON adalah array dari "Section". Contoh sederhana:</p>
+                    <pre class="bg-gray-900 p-3 rounded text-sm font-mono border border-gray-700">
+[
+  {
+    "title": "DATA UTAMA",
+    "fields": [
+      {
+        "type": "text",
+        "label": "Nomor Surat",
+        "variable": "no_sk",
+        "default": "..."
+      },
+      {
+         "type": "date",
+         "label": "Tanggal",
+         "variable": "tanggal_sk"
+      }
+    ]
+  }
+]</pre>
+                    <div class="mt-4">
+                        <h4 class="font-bold text-white mb-2">Tipe Field yang Tersedia:</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-gray-900 p-3 rounded border border-gray-700">
+                                <span class="text-green-400 font-bold">text</span>
+                                <p class="text-xs">Input teks singkat (satu baris).</p>
+                            </div>
+                            <div class="bg-gray-900 p-3 rounded border border-gray-700">
+                                <span class="text-green-400 font-bold">textarea</span>
+                                <p class="text-xs">Input teks panjang (paragraf).</p>
+                            </div>
+                            <div class="bg-gray-900 p-3 rounded border border-gray-700">
+                                <span class="text-green-400 font-bold">date</span>
+                                <p class="text-xs">Pemilih tanggal. Otomatis menghasilkan <code>{{tanggal_indo}}</code> & <code>{{tanggal_hijri}}</code>.</p>
+                            </div>
+                            <div class="bg-gray-900 p-3 rounded border border-gray-700">
+                                <span class="text-green-400 font-bold">select</span>
+                                <p class="text-xs">Dropdown pilihan. Perlu properti <code>options: ["A", "B"]</code>.</p>
+                            </div>
+                            <div class="bg-gray-900 p-3 rounded border border-gray-700">
+                                <span class="text-green-400 font-bold">checkbox</span>
+                                <p class="text-xs">Switch on/off. Menghasilkan nilai true/false. Berguna untuk logika <code>{{#if}}</code>.</p>
+                            </div>
+                            <div class="bg-gray-900 p-3 rounded border border-gray-700">
+                                <span class="text-green-400 font-bold">repeater</span>
+                                <p class="text-xs">Daftar dinamis (Tambah/Hapus item). Contoh: Menimbang, Mengingat.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: HTML Pattern -->
+                <div>
+                    <h3 class="text-xl font-bold text-green-400 mb-2">3. HTML Pattern & Variabel</h3>
+                    <p class="mb-4">Gunakan HTML standar dengan syntax Handlebars untuk menyisipkan data.</p>
+                    
+                    <h4 class="font-bold text-white mb-2">Variabel Sistem (Otomatis Tersedia)</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-400 border border-gray-700">
+                            <thead class="text-xs text-gray-200 uppercase bg-gray-700">
+                                <tr>
+                                    <th class="px-4 py-2">Variabel</th>
+                                    <th class="px-4 py-2">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="bg-gray-800 border-b border-gray-700">
+                                    <td class="px-4 py-2 font-mono text-blue-300">{{tanggal_indo}}</td>
+                                    <td class="px-4 py-2">Tanggal format Indonesia (contoh: 12 Desember 2024). Muncul otomatis jika ada input <code>type: "date"</code>.</td>
+                                </tr>
+                                <tr class="bg-gray-800 border-b border-gray-700">
+                                    <td class="px-4 py-2 font-mono text-blue-300">{{tanggal_hijri}}</td>
+                                    <td class="px-4 py-2">Tanggal format Hijriah. Muncul otomatis mendampingi tanggal masehi.</td>
+                                </tr>
+                                <tr class="bg-gray-800 border-b border-gray-700">
+                                    <td class="px-4 py-2 font-mono text-purple-300">{{globalSettings.kopTitle1}}</td>
+                                    <td class="px-4 py-2">Judul Kop Surat Baris 1 (dari Global Settings). Tersedia Title1 s.d Title4.</td>
+                                </tr>
+                                <tr class="bg-gray-800 border-b border-gray-700">
+                                    <td class="px-4 py-2 font-mono text-purple-300">{{globalSettings.kopAddress}}</td>
+                                    <td class="px-4 py-2">Alamat Kantor (dari Global Settings).</td>
+                                </tr>
+                                <tr class="bg-gray-800 border-b border-gray-700">
+                                    <td class="px-4 py-2 font-mono text-purple-300">{{globalSettings.kopLogo}}</td>
+                                    <td class="px-4 py-2">URL Logo Instansi. Gunakan di dalam tag img src.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h4 class="font-bold text-white mt-4 mb-2">Syntax Logika</h4>
+                    <div class="space-y-4">
+                        <div class="bg-gray-900 p-4 rounded border border-gray-700">
+                            <p class="font-bold text-gray-300 mb-1">Mencetak Variabel:</p>
+                            <code class="text-blue-300">{{variabel_anda}}</code>
+                        </div>
+                        <div class="bg-gray-900 p-4 rounded border border-gray-700">
+                            <p class="font-bold text-gray-300 mb-1">Looping (Untuk Repeater):</p>
+                            <pre class="text-green-300 text-sm">
+&lt;ol&gt;
+  {{#each list_menimbang}}
+    &lt;li&gt;{{this}}&lt;/li&gt;
+  {{/each}}
+&lt;/ol&gt;</pre>
+                        </div>
+                        <div class="bg-gray-900 p-4 rounded border border-gray-700">
+                            <p class="font-bold text-gray-300 mb-1">Kondisional (If):</p>
+                            <pre class="text-yellow-300 text-sm">
+{{#if tampilkan_salinan}}
+  &lt;div&gt;Ini hanya muncul jika checkbox dicentang&lt;/div&gt;
+{{/if}}</pre>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <div class="p-6 border-t border-gray-700 flex justify-end">
+                <button @click="showHelp = false" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded font-bold transition">
+                    Tutup Panduan
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
+
+
 
 <!-- Vue Logic -->
 <script src="<?php echo base_url('assets/js/template_form_vue.js'); ?>"></script>
