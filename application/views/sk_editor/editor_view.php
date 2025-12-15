@@ -364,65 +364,73 @@
                 </div>
             </div>
 
-            <!-- Logo SK (Content - Tengah Atas) -->
-            <div class="bg-amber-50 dark:bg-amber-900/30 rounded-lg p-4 border border-amber-100 dark:border-amber-800 transition-colors duration-200 mb-6">
-                <h3 class="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider mb-3 flex items-center">
-                    <i class="fas fa-image mr-2"></i> Logo Tengah SK
-                </h3>
-                <div class="mb-2">
-                    <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1 font-medium">Upload Logo (e.g. Garuda)</label>
-                    <input type="file" @change="handleContentLogoUpload" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 dark:text-gray-400 dark:file:bg-amber-900 dark:file:text-amber-200">
+                <!-- Page Appearance Settings (New) -->
+                <div>
+                    <h3 class="text-xs font-bold text-indigo-600 dark:text-blue-400 uppercase tracking-wider mb-3 border-b border-gray-200 dark:border-gray-700 pb-1 flex items-center">
+                        <span class="mr-2 px-2 py-0.5 bg-indigo-50 dark:bg-blue-900/30 rounded text-indigo-700 dark:text-blue-300"><i class="fas fa-cog"></i></span> TAMPILAN HALAMAN
+                    </h3>
                     
-                    <div v-if="formData.skContentLogo" class="mt-2 bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
-                        <div class="flex justify-center mb-2">
-                            <!-- Show preview with dynamic width -->
-                            <img :src="formData.skContentLogo" class="object-contain" :style="{width: (formData.skContentLogoWidth || 100) + 'px'}">
+                    <div class="space-y-4 mb-6 px-1">
+                        <!-- Show Kop Toggle -->
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Tampilkan Kop Surat</label>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" v-model="globalSettings.showKop" class="sr-only peer">
+                                <div class="w-9 h-5 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                            </label>
                         </div>
-                        <div class="flex items-center space-x-2">
-                            <label class="text-xs text-gray-500">Size:</label>
-                            <input type="range" v-model="formData.skContentLogoWidth" min="20" max="300" class="w-full h-1 bg-gray-300 rounded-lg appearance-none cursor-pointer">
-                            <input type="number" v-model="formData.skContentLogoWidth" class="w-12 text-xs text-center border rounded dark:bg-gray-700 dark:text-white">
+                        
+
+
+                        <!-- Logo Tengah SK -->
+                        <div class="space-y-2 pt-2 border-t border-dashed border-gray-200 dark:border-gray-700">
+                            <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Logo Tengah SK</label>
+                            
+                            <!-- Upload Logo Tengah -->
+                            <input type="file" @change="handleContentLogoUpload" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 dark:text-gray-400 dark:file:bg-green-900 dark:file:text-green-200">
+                            
+                            <!-- Logo Preview & Sizing -->
+                            <div v-if="formData.logo_tengah || formData.skContentLogo" class="bg-gray-100 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
+                                <div class="flex justify-center mb-2">
+                                    <img :src="formData.logo_tengah || formData.skContentLogo" class="max-h-20 object-contain border border-gray-300 bg-white">
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <label class="text-xs text-gray-500">Ukuran:</label>
+                                    <input type="range" v-model="formData.logo_tengah_width" min="40" max="300" class="w-full h-1 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+                                    <input type="number" v-model="formData.logo_tengah_width" class="w-12 text-xs text-center border rounded dark:bg-gray-700 dark:text-white">
+                                </div>
+                                <div class="text-center mt-1">
+                                    <span class="text-xs text-gray-500">{{ formData.logo_tengah_width || 100 }}px</span>
+                                </div>
+                                <div class="text-center mt-1">
+                                    <button @click="formData.logo_tengah = null; formData.skContentLogo = null; formData.logo_tengah_width = null" class="text-xs text-red-500 hover:underline">Hapus Logo</button>
+                                </div>
+                            </div>
                         </div>
-                         <div class="text-center mt-1">
-                            <button @click="formData.skContentLogo = null; formData.skContentLogoWidth = null" class="text-xs text-red-500 hover:underline">Remove Logo</button>
-                        </div>
+
+
                     </div>
                 </div>
-            </div>
 
-            <!-- Signatory (Penandatangan) -->
-            <div class="bg-indigo-50 dark:bg-indigo-900/30 rounded-lg p-4 border border-indigo-100 dark:border-indigo-800 transition-colors duration-200">
-                 <h3 class="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider mb-3 flex items-center">
-                    <i class="fas fa-file-signature mr-2"></i> Penandatangan
-                </h3>
-                <div class="mb-2">
-                    <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1 font-medium">Pilih Pejabat</label>
-                    <select v-model="selectedPejabatId" @change="onPejabatSelect($event)" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors">
-                        <option value="">-- Pilih --</option>
-                        <option v-for="p in pejabatList" :key="p.id" :value="p.id">{{ p.nama }} ({{ p.jabatan }})</option>
-                    </select>
-                </div>
-            </div>
+                <!-- Dynamic Form -->
+                <div v-for="(section, sIndex) in config" :key="sIndex" class="transition-colors duration-200">
+                    <h3 class="text-xs font-bold text-indigo-600 dark:text-blue-400 uppercase tracking-wider mb-3 border-b border-gray-200 dark:border-gray-700 pb-1 flex items-center">
+                    <span class="mr-2 px-2 py-0.5 bg-indigo-50 dark:bg-blue-900/30 rounded text-indigo-700 dark:text-blue-300">{{sIndex + 1}}</span> {{ section.section }}
+                    </h3>
 
-            <!-- Dynamic Form -->
-            <div v-for="(section, sIndex) in config" :key="sIndex" class="transition-colors duration-200">
-                <h3 class="text-xs font-bold text-indigo-600 dark:text-blue-400 uppercase tracking-wider mb-3 border-b border-gray-200 dark:border-gray-700 pb-1 flex items-center">
-                   <span class="mr-2 px-2 py-0.5 bg-indigo-50 dark:bg-blue-900/30 rounded text-indigo-700 dark:text-blue-300">{{sIndex + 1}}</span> {{ section.section }}
-                </h3>
-                
-                <div class="space-y-4 mb-6">
-                    <div v-for="(field, fIndex) in section.fields" :key="fIndex">
+                    <div class="space-y-4 mb-6" v-if="section && section.fields">
+                    <div v-for="(field, fIndex) in section.fields" :key="fIndex" v-show="field.type !== 'hidden'">
                         <label v-if="field.type !== 'checkbox'" class="block text-gray-600 dark:text-gray-300 text-xs mb-1 font-medium">{{ field.label }}</label>
                         
                         <!-- Text/Textarea/Number -->
                         <textarea v-if="['text', 'textarea'].includes(field.type)" v-model="formData[field.variable]" rows="2"
-                            :readonly="['nama_penandatangan', 'jabatan_penandatangan'].includes(field.variable)"
-                            :class="{'bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-500': ['nama_penandatangan', 'jabatan_penandatangan'].includes(field.variable)}"
+                            :readonly="['nama_penandatangan', 'jabatan_penandatangan', 'nip_penandatangan'].includes(field.variable)"
+                            :class="{'bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-500': ['nama_penandatangan', 'jabatan_penandatangan', 'nip_penandatangan'].includes(field.variable)}"
                             class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition shadow-sm"></textarea>
 
                         <input v-if="field.type === 'number'" type="number" v-model="formData[field.variable]"
-                             :readonly="['nama_penandatangan', 'jabatan_penandatangan'].includes(field.variable)"
-                             :class="{'bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-500': ['nama_penandatangan', 'jabatan_penandatangan'].includes(field.variable)}"
+                             :readonly="['nama_penandatangan', 'jabatan_penandatangan', 'nip_penandatangan'].includes(field.variable)"
+                             :class="{'bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-500': ['nama_penandatangan', 'jabatan_penandatangan', 'nip_penandatangan'].includes(field.variable)}"
                              class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition shadow-sm">
                         
                         <input v-if="field.type === 'date'" type="date" v-model="formData[field.variable]"
@@ -434,11 +442,44 @@
                             <option v-for="opt in field.options" :value="opt">{{ opt }}</option>
                         </select>
 
+                        <!-- Auto-Selected Pejabat (Read-only) -->
+                        <div v-if="field.type === 'select_pejabat'">
+                            <input type="text" :value="formData.nama_penandatangan ? formData.nama_penandatangan + ' (' + (formData.jabatan_penandatangan_select || formData.jabatan_penandatangan) + ')' : 'Memuat pejabat default...'" readonly 
+                                class="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded px-3 py-2 text-sm cursor-not-allowed focus:outline-none">
+                            <p class="text-[10px] text-gray-400 mt-1 italic">*Otomatis diambil dari Master Pejabat (Default)</p>
+                        </div>
+
+                        <!-- Select Jabatan (Master - Readonly) -->
+                        <div v-if="field.type === 'select_jabatan'">
+                            <input type="text" v-model="formData[field.variable]" readonly 
+                                class="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded px-3 py-2 text-sm cursor-not-allowed focus:outline-none">
+                            <p class="text-[10px] text-gray-400 mt-1 italic">*Diatur dari Master Pejabat (Default)</p>
+                        </div>
+
+                        <!-- Image Upload (New) -->
+                        <div v-if="field.type === 'image'">
+                            <input type="file" @change="handleGenericImageUpload($event, field.variable, field.width_variable, field.default_width)" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 dark:text-gray-400 dark:file:bg-amber-900 dark:file:text-amber-200">
+                            
+                            <div v-if="formData[field.variable]" class="mt-2 bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
+                                <div class="flex justify-center mb-2">
+                                    <img :src="formData[field.variable]" class="object-contain" :style="{width: (formData[field.width_variable] || field.default_width || 100) + 'px'}">
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <label class="text-xs text-gray-500">Width:</label>
+                                    <input type="range" v-model="formData[field.width_variable]" min="20" max="300" class="w-full h-1 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+                                    <input type="number" v-model="formData[field.width_variable]" class="w-12 text-xs text-center border rounded dark:bg-gray-700 dark:text-white">
+                                </div>
+                                <div class="text-center mt-1">
+                                    <button @click="formData[field.variable] = null" class="text-xs text-red-500 hover:underline">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Checkbox -->
                         <div v-if="field.type === 'checkbox'" class="flex items-center mt-2">
-                            <input type="checkbox" v-model="formData[field.variable]" :id="'cb-'+fIndex" 
+                            <input type="checkbox" v-model="formData[field.variable]" :id="'cb-'+fIndex+'-'+sIndex" 
                                 class="w-4 h-4 text-indigo-600 bg-white border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                            <label :for="'cb-'+fIndex" class="ml-2 text-sm font-medium text-slate-700 dark:text-gray-300">{{ field.label }}</label>
+                            <label :for="'cb-'+fIndex+'-'+sIndex" class="ml-2 text-sm font-medium text-slate-700 dark:text-gray-300">{{ field.label }}</label>
                         </div>
 
                         <!-- Repeater -->
@@ -497,6 +538,7 @@
 </div>
 
 <!-- Vue Application Logic -->
+<script src="<?php echo base_url('assets/js/mustache.min.js'); ?>"></script>
 <script src="<?php echo base_url('assets/js/sk_editor_vue.js'); ?>"></script>
 </body>
 </html>

@@ -15,7 +15,7 @@ createApp({
         <table class="w-full">
             <tr>
                 <td class="w-24 align-middle">
-                    <img src="{{globalSettings.kopLogo}}" alt="Logo" class="w-20 mx-auto">
+                    <img src="{{globalSettings.kopLogo}}" alt="Logo" style="width: {{globalSettings.kopLogoWidth}}px; max-width: none;" class="mx-auto">
                 </td>
                 <td class="align-middle text-center">
                     <h3 class="font-bold text-lg uppercase">{{globalSettings.kopTitle1}}</h3>
@@ -32,6 +32,11 @@ createApp({
     <div class="text-center mb-6">
         <img src="{{globalSettings.kopLogo}}" alt="Logo" class="w-20 mx-auto">
         <br>
+        {{#if logo_tengah}}
+        <div class="mb-4">
+             <img src="{{logo_tengah}}" style="width: {{logo_tengah_width}}px; max-width: none;" class="mx-auto">
+        </div>
+        {{/if}}
         <h4 class="font-bold uppercase">{{jabatan_penandatangan}}</h4>
         <br>
         <h4 class="font-bold uppercase">KEPUTUSAN {{jabatan_penandatangan}}</h4>
@@ -110,7 +115,7 @@ createApp({
                     <p>{{tanggal_hijri}}</p>
                     {{/if}}
                     <br>
-                    <p class="font-bold uppercase">{{jabatan_selector}},</p>
+                    <p class="font-bold uppercase">{{jabatan_penandatangan}},</p>
                     <br><br><br>
                     <p class="font-bold underline uppercase">{{nama_penandatangan}}</p>
                     {{#if nip_penandatangan}}
@@ -131,7 +136,7 @@ createApp({
         </ol>
     </div>
     {{/if}}`,
-            form_config: TEMPLATE_DATA.form_config || `[{"title":"HEADER SK","fields":[{"type":"text","label":"Nomor Surat","variable":"no_sk","default":"W26-A/SK.OT1.6/XI/2025"},{"type":"textarea","label":"Tentang","variable":"judul_sk","default":"PEMBENTUKAN TIM KERJA REFORMASI BIROKRASI PENGADILAN AGAMA GORONTALO TAHUN 2025"},{"type":"date","label":"Tanggal Ditetapkan","variable":"tanggal_sk","default":"2025-12-01"}]},{"title":"KONSIDERANS","fields":[{"type":"repeater","label":"Menimbang (Poin-poin)","variable":"list_menimbang"},{"type":"repeater","label":"Mengingat (Poin-poin)","variable":"list_mengingat"}]},{"title":"PENANDATANGAN","fields":[{"type":"select","label":"Pilih Jabatan","variable":"jabatan_selector","options":["Ketua","Wakil Ketua","Panitera","Sekretaris"],"default":"Ketua"},{"type":"text","label":"Jabatan (Otomatis)","variable":"jabatan_penandatangan","default":"KETUA PENGADILAN AGAMA GORONTALO"},{"type":"text","label":"Nama Pejabat","variable":"nama_penandatangan","default":"Drs. H. MURSIDIN, M.H."},{"type":"text","label":"NIP Pejabat","variable":"nip_penandatangan","default":"196707041994031003"},{"type":"checkbox","label":"Tampilkan Tanggal Hijriah","variable":"tampilkan_hijriah","default":true}]},{"title":"SALINAN (Opsional)","fields":[{"type":"checkbox","label":"Tampilkan Salinan","variable":"tampilkan_salinan","default":false},{"type":"repeater","label":"Daftar Salinan","variable":"list_salinan"}]}]`
+            form_config: TEMPLATE_DATA.form_config || `[{"title":"HEADER SK","fields":[{"type":"text","label":"Nomor Surat","variable":"no_sk","default":"W26-A/SK.OT1.6/XI/2025"},{"type":"textarea","label":"Tentang","variable":"judul_sk","default":"PEMBENTUKAN TIM KERJA REFORMASI BIROKRASI PENGADILAN AGAMA GORONTALO TAHUN 2025"},{"type":"date","label":"Tanggal Ditetapkan","variable":"tanggal_sk","default":"2025-12-01"}]},{"title":"KONSIDERANS","fields":[{"type":"repeater","label":"Menimbang (Poin-poin)","variable":"list_menimbang"},{"type":"repeater","label":"Mengingat (Poin-poin)","variable":"list_mengingat"}]},{"title":"LOGO TENGAH (Opsional)","fields":[{"type":"image","label":"Logo Tengah SK","variable":"logo_tengah","width_variable":"logo_tengah_width","default_width":70}]},{"title":"PENANDATANGAN","fields":[{"type":"select_jabatan","label":"Pilih Jabatan","variable":"jabatan_penandatangan_select"},{"type":"hidden","label":"Jabatan (Otomatis)","variable":"jabatan_penandatangan","default":"KETUA PENGADILAN AGAMA GORONTALO"},{"type":"hidden","label":"Nama Pejabat","variable":"nama_penandatangan","default":"Drs. H. MURSIDIN, M.H."},{"type":"hidden","label":"NIP Pejabat","variable":"nip_penandatangan","default":"196707041994031003"},{"type":"checkbox","label":"Tampilkan Tanggal Hijriah","variable":"tampilkan_hijriah","default":true}]},{"title":"SALINAN (Opsional)","fields":[{"type":"checkbox","label":"Tampilkan Salinan","variable":"tampilkan_salinan","default":false},{"type":"repeater","label":"Daftar Salinan","variable":"list_salinan"}]}]`
         });
 
         const siteUrl = ref(SITE_URL);

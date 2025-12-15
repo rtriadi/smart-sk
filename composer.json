@@ -14,7 +14,8 @@
 		"php": ">=5.3.7",
 		"dompdf/dompdf": "^3.1",
 		"phenx/php-svg-lib": "^1.0",
-		"phenx/php-font-lib": "^1.0"
+		"phenx/php-font-lib": "^1.0",
+		"mustache/mustache": "^3.0"
 	},
 	"suggest": {
 		"paragonie/random_compat": "Provides better randomness in PHP 5.x"

@@ -293,44 +293,50 @@ class Sk_editor extends CI_Controller {
         $settings = json_decode($archive->settings_json, true);
         $html = $template->html_pattern;
 
-        // 1. Simple Replacement
-        foreach ($input_data as $key => $value) {
-            if (!is_array($value)) {
-                $val = str_replace("\n", "<br>", $value);
-                $html = str_replace("{{" . $key . "}}", $val, $html);
-            }
+        // Merge Settings into Data
+        $data = $input_data;
+        $data['globalSettings'] = $settings;
+
+        // 1. LEGACY PRE-PROCESSING (Same as JS)
+        // {{#each var}} -> {{#var}}
+        $html = preg_replace('/{{#each\s+(.*?)}}/', '{{#$1}}', $html);
+        $html = str_replace('{{/each}}', '{{/}}', $html);
+        
+        // {{#if var}} -> {{#var}}
+        $html = preg_replace('/{{#if\s+(.*?)}}/', '{{#$1}}', $html);
+        $html = str_replace('{{/if}}', '{{/}}', $html);
+
+        // 2. MUSTACHE RENDER
+        // Ensure Composer Autoload
+        if (file_exists(FCPATH . 'vendor/autoload.php')) {
+            require_once FCPATH . 'vendor/autoload.php';
         }
 
-        // 2. Repeater Replacement
-        $html = preg_replace_callback('/{{#each\s+(.*?)}}(.*?){{\/each}}/s', function($matches) use ($input_data) {
-            $variable = trim($matches[1]);
-            $content = $matches[2];
-            $output = '';
-            
-            if (isset($input_data[$variable]) && is_array($input_data[$variable])) {
-                foreach ($input_data[$variable] as $item) {
-                    $itemVal = str_replace("\n", "<br>", $item);
-                    $output .= str_replace('{{this}}', $itemVal, $content);
+        try {
+            $m = new Mustache_Engine([
+                'entity_flags' => ENT_QUOTES,
+                'escape' => function($value) {
+                    // Custom escape: Convert newlines to <br> BEFORE htmlspecialchars
+                    // BUT Mustache runs escape on the raw string. 
+                    // Better strategy: pre-process data like JS did.
+                    return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
                 }
-            }
-            return $output;
-        }, $html);
+            ]);
 
-        // 3. Conditional Logic
-        $html = preg_replace_callback('/{{#if\s+(.*?)}}(.*?){{\/if}}/s', function($matches) use ($input_data, $settings) {
-            $variable = trim($matches[1]);
-            $content = $matches[2];
-            
-            if (!empty($input_data[$variable])) {
-                return $content;
-            }
-            if (isset($settings[$variable]) && $settings[$variable]) {
-                return $content;
-            }
-            return '';
-        }, $html);
+            // PRE-PROCESS DATA (Newlines -> <br>)
+            array_walk_recursive($data, function(&$item) {
+                if (is_string($item)) {
+                     $item = nl2br($item);
+                }
+            });
 
-        // 4. CSS Injection
+            $html = $m->render($html, $data);
+
+        } catch (Exception $e) {
+            $html .= "<br><b>Render Error: " . $e->getMessage() . "</b>";
+        }    
+
+        // 4. CSS Injection (Logic remains same, just after render)
         if ($settings) {
             $marginTop = isset($settings['marginTop']) ? $settings['marginTop'] . 'mm' : '20mm';
             $marginBottom = isset($settings['marginBottom']) ? $settings['marginBottom'] . 'mm' : '20mm';

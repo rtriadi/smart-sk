@@ -7,9 +7,20 @@ createApp({
         // Filter out legacy 'jabatan_selector' from dynamic form if it exists, 
         // as we now use the dedicated "Penandatangan" sidebar section.
         if (config.value && Array.isArray(config.value)) {
+            // FORCE HIDE Signatory Derived Fields (User Request)
             config.value.forEach(section => {
                 if (section.fields) {
-                    section.fields = section.fields.filter(f => f.variable !== 'jabatan_selector');
+                    section.fields.forEach(field => {
+                        // Hide all position-related fields and any field with "jabatan" in variable name or label
+                        if (['jabatan_penandatangan', 'nama_penandatangan', 'nip_penandatangan', 'jabatan_penandatangan_select', 'jabatan_selector'].includes(field.variable) || 
+                            field.type === 'select_jabatan' || 
+                            field.type === 'select_pejabat' ||
+                            (field.variable && field.variable.includes('jabatan')) ||
+                            (field.label && field.label.toLowerCase().includes('pilih jabatan'))) {
+                            field.type = 'hidden';
+                        }
+                        // removed Force Readonly Display for Selector block
+                    });
                 }
             });
         }
@@ -50,11 +61,11 @@ createApp({
         // Theme Logic
         const isDarkMode = ref(localStorage.getItem('sk_editor_theme') === 'dark');
 
-        const selectedPejabatId = ref('');
+        // selectedPejabatId removed - no longer needed for auto-population
 
-        // Helper to set pejabat
+        // Helper to set pejabat (auto-population)
         const setPejabat = (id) => {
-            selectedPejabatId.value = id; // Sync dropdown
+            // No longer need to sync dropdown - auto-population only
             const p = pejabatList.value.find(x => x.id == id);
             if (p) {
                 // Determine full title
@@ -69,19 +80,37 @@ createApp({
                 };
 
                 // Flexible Match (Case insensitive check if direct match fails)
-                if (titles[p.jabatan]) {
-                    jabatanFull = titles[p.jabatan];
+                const safeJabatan = p.jabatan ? p.jabatan.trim() : '';
+
+                if (titles[safeJabatan]) {
+                    jabatanFull = titles[safeJabatan];
                 } else {
                     // Try finding key case-insensitive
-                    const key = Object.keys(titles).find(k => k.toLowerCase() === p.jabatan.toLowerCase());
-                    if (key) jabatanFull = titles[key];
+                    const key = Object.keys(titles).find(k => k.toLowerCase() === safeJabatan.toLowerCase());
+                    if (key) {
+                        jabatanFull = titles[key];
+                    } else {
+                        // Fallback: Use raw or uppercase
+                        jabatanFull = safeJabatan.toUpperCase();
+                    }
                 }
 
+                // Force Update
                 formData.nama_penandatangan = p.nama;
                 formData.nip_penandatangan = p.nip;
                 formData.jabatan_penandatangan = jabatanFull;
+                // Sync the "Selector" variable for the readonly display
+                if (formData.hasOwnProperty('jabatan_penandatangan_select')) {
+                    formData.jabatan_penandatangan_select = p.jabatan;
+                } else {
+                    // If flexible, just set it anyway
+                    formData['jabatan_penandatangan_select'] = p.jabatan;
+                }
+
+                console.log("Pejabat Set:", p.nama, jabatanFull);
             }
         };
+
 
         // --- Initialization ---
         onMounted(() => {
@@ -93,18 +122,23 @@ createApp({
             }
 
             // Initialize formData
-            config.value.forEach(section => {
-                section.fields.forEach(field => {
-                    if (field.type === 'repeater') {
-                        formData[field.variable] = [];
-                    } else if (field.variable === 'no_sk' && typeof TEMPLATE_PATTERN !== 'undefined' && TEMPLATE_PATTERN) {
-                        // Prefer the database pattern for the letter number
-                        formData[field.variable] = TEMPLATE_PATTERN;
-                    } else {
-                        formData[field.variable] = field.default || '';
+            // Initialize formData
+            if (config.value && Array.isArray(config.value)) {
+                config.value.forEach(section => {
+                    if (section && section.fields && Array.isArray(section.fields)) {
+                        section.fields.forEach(field => {
+                            if (field.type === 'repeater') {
+                                formData[field.variable] = [];
+                            } else if (field.variable === 'no_sk' && typeof TEMPLATE_PATTERN !== 'undefined' && TEMPLATE_PATTERN) {
+                                // Prefer the database pattern for the letter number
+                                formData[field.variable] = TEMPLATE_PATTERN;
+                            } else {
+                                formData[field.variable] = field.default || '';
+                            }
+                        });
                     }
                 });
-            });
+            }
 
             // Initialize Attachments if not present
             if (!formData.attachments) {
@@ -117,22 +151,13 @@ createApp({
                 // This preserves new fields that might not be in the draft
                 Object.assign(formData, DRAFT_DATA);
 
-                // EDIT MODE: Restore Signatory Dropdown Selection
-                if (formData.nip_penandatangan) {
-                    const match = pejabatList.value.find(p => p.nip == formData.nip_penandatangan);
-                    if (match) selectedPejabatId.value = match.id;
-                } else if (formData.nama_penandatangan) {
-                    // Fallback to name match
-                    const match = pejabatList.value.find(p => p.nama == formData.nama_penandatangan);
-                    if (match) selectedPejabatId.value = match.id;
-                }
+                // EDIT MODE: Position data already loaded from draft, no need to sync dropdown
             } else {
                 // NEW DRAFT: Attempt to set Default Pejabat (Active & Default=1)
                 const defaultPejabat = pejabatList.value.find(p => p.is_default == 1);
                 if (defaultPejabat) {
-                    // Force update
+                    // Auto-populate with default position
                     setPejabat(defaultPejabat.id);
-                    selectedPejabatId.value = defaultPejabat.id;
                 }
             }
 
@@ -166,11 +191,7 @@ createApp({
         }, { deep: true });
 
         // --- Watchers for Smart Logic ---
-
-        // 1. Signatory Logic
-        const onPejabatSelect = (event) => {
-            setPejabat(event.target.value);
-        };
+        // Position selection methods removed - using auto-population only
 
         // 2. Date Logic (Indo + Hijri)
         watch(() => formData.tanggal_sk, (newVal) => {
@@ -196,6 +217,19 @@ createApp({
                 formData.tanggal_hijri = '';
             }
         }, { immediate: true });
+
+        // 3. Logo Tengah Width Synchronization
+        watch(() => formData.logo_tengah_width, (newVal) => {
+            if (newVal && formData.skContentLogoWidth !== newVal) {
+                formData.skContentLogoWidth = newVal;
+            }
+        });
+
+        watch(() => formData.skContentLogoWidth, (newVal) => {
+            if (newVal && formData.logo_tengah_width !== newVal) {
+                formData.logo_tengah_width = newVal;
+            }
+        });
 
         // --- Computed Properties ---
         const previewHtml = computed(() => {
@@ -273,21 +307,25 @@ createApp({
             }
 
             // 2. Repeater Logic
-            config.value.forEach(section => {
-                section.fields.forEach(field => {
-                    if (field.type === 'repeater') {
-                        const items = formData[field.variable] || [];
-                        const loopRegex = new RegExp(`{{#each ${field.variable}}}([\\s\\S]*?){{/each}}`, 'g');
+            if (config.value && Array.isArray(config.value)) {
+                config.value.forEach(section => {
+                    if (section && section.fields && Array.isArray(section.fields)) {
+                        section.fields.forEach(field => {
+                            if (field.type === 'repeater') {
+                                const items = formData[field.variable] || [];
+                                const loopRegex = new RegExp(`{{#each ${field.variable}}}([\\s\\S]*?){{/each}}`, 'g');
 
-                        html = html.replace(loopRegex, (match, content) => {
-                            return items.map(item => {
-                                const formattedItem = String(item).replace(/\n/g, '<br>');
-                                return content.replace(/{{this}}/g, formattedItem);
-                            }).join('');
+                                html = html.replace(loopRegex, (match, content) => {
+                                    return items.map(item => {
+                                        const formattedItem = String(item).replace(/\n/g, '<br>');
+                                        return content.replace(/{{this}}/g, formattedItem);
+                                    }).join('');
+                                });
+                            }
                         });
                     }
                 });
-            });
+            }
 
             // 3. Conditional Logic
             const ifRegex = /{{#if\s+(.*?)}}([\s\S]*?){{\/if}}/g;
@@ -441,13 +479,7 @@ createApp({
                     // Try WebP first for best compression with transparency support
                     let dataUrl = canvas.toDataURL('image/webp', quality);
 
-                    // Fallback or Check Size. If browser defaults to PNG (no WebP support), length might be large.
-                    // If > 200KB, try reducing dimensions or quality further? 
-                    // Note: toDataURL('image/png') ignores quality argument.
-
-                    if (dataUrl.length > 500000) { // If still > 500KB (rare for 300px)
-                        // Try JPEG if transparency not critical? No, keep transparency.
-                        // Force smaller scale
+                    if (dataUrl.length > 500000) {
                         const scale = 0.7;
                         canvas.width = width * scale;
                         canvas.height = height * scale;
@@ -460,6 +492,21 @@ createApp({
                 img.src = e.target.result;
             };
             reader.readAsDataURL(file);
+        };
+
+        const handleGenericImageUpload = (event, variable, widthVariable, defaultWidth) => {
+            const file = event.target.files[0];
+            if (file) {
+                // Compress to 300x300, 0.7 quality
+                compressImage(file, 300, 300, 0.7, (dataUrl) => {
+                    formData[variable] = dataUrl;
+                    if (!formData[widthVariable]) {
+                        formData[widthVariable] = defaultWidth || 70;
+                    }
+                    // Reset input
+                    event.target.value = '';
+                });
+            }
         };
 
         const handleLogoUpload = (event) => {
@@ -481,8 +528,13 @@ createApp({
             if (file) {
                 // Compress to 300x300, 0.7 quality
                 compressImage(file, 300, 300, 0.7, (dataUrl) => {
+                    // Set both variables for compatibility
                     formData.skContentLogo = dataUrl;
+                    formData.logo_tengah = dataUrl;
+                    
+                    // Set width for both variables
                     if (!formData.skContentLogoWidth) formData.skContentLogoWidth = 100;
+                    if (!formData.logo_tengah_width) formData.logo_tengah_width = 100;
 
                     // Reset input
                     event.target.value = '';
@@ -1032,14 +1084,16 @@ createApp({
             addRepeaterItem,
             removeRepeaterItem,
             addAttachment,
+            removeAttachment,
+            saveDraft,
+            isSaving,
             printPdf,
             exportWord,
             exportPdf,
             fixAutoFormatting,
             pejabatList,
-            onPejabatSelect,
             paginate,
-            selectedPejabatId
+            handleContentLogoUpload
         };
     }
 }).mount('#app');
