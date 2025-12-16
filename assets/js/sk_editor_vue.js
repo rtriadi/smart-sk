@@ -90,6 +90,25 @@ createApp({
             }
         };
 
+        // Zoom Logic
+        const zoomScale = ref(1.0);
+
+        const zoomIn = () => {
+            if (zoomScale.value < 2.0) {
+                zoomScale.value = parseFloat((zoomScale.value + 0.1).toFixed(1));
+            }
+        };
+
+        const zoomOut = () => {
+            if (zoomScale.value > 0.5) {
+                zoomScale.value = parseFloat((zoomScale.value - 0.1).toFixed(1));
+            }
+        };
+
+        const resetZoom = () => {
+            zoomScale.value = 1.0;
+        };
+
         // selectedPejabatId removed - no longer needed for auto-population
 
         // Helper to set pejabat (auto-population)
@@ -1162,7 +1181,11 @@ createApp({
             isSidebarOpen,
             toggleSidebar,
             activeSections,
-            toggleSection
+            toggleSection,
+            zoomScale,
+            zoomIn,
+            zoomOut,
+            resetZoom
         };
     }
 }).mount('#app');

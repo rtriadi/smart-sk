@@ -553,7 +553,21 @@
 
     <!-- Main Content (Preview) -->
     <div class="flex-1 bg-slate-200/50 dark:bg-gray-900 overflow-auto p-8 relative transition-colors duration-200">
-        <!-- Canvas -->
+        
+        <!-- Zoom Controls (Floating) -->
+        <div class="fixed bottom-20 right-8 z-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col p-1.5 space-y-1 no-print">
+            <button @click="zoomIn" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition" title="Zoom In">
+                <i class="fas fa-plus"></i>
+            </button>
+            <div class="text-[10px] font-bold text-center text-gray-500 py-1 cursor-default">{{ Math.round(zoomScale * 100) }}%</div>
+            <button @click="zoomOut" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition" title="Zoom Out">
+                <i class="fas fa-minus"></i>
+            </button>
+             <button @click="resetZoom" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition border-t border-gray-100 dark:border-gray-700 mt-1" title="Reset Zoom">
+                <i class="fas fa-expand"></i>
+            </button>
+        </div>
+
         <!-- Canvas -->
         <!-- 1. Hidden Source (Raw HTML) -->
         <div id="raw-content" style="position:absolute; left:-9999px; top:0; width: 210mm; visibility: hidden;">
@@ -561,7 +575,7 @@
         </div>
 
         <!-- 2. Visible Pagination Container -->
-        <div id="pagination-container" class="flex flex-col items-center space-y-8 pb-10">
+        <div id="pagination-container" class="flex flex-col items-center space-y-8 pb-10 transition-transform duration-200 origin-top" :style="{ transform: 'scale(' + zoomScale + ')' }">
             <!-- Pages will be injected here by JS -->
         </div>
     </div>
