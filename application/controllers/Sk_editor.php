@@ -344,21 +344,37 @@ class Sk_editor extends CI_Controller {
             $marginRight = isset($settings['marginRight']) ? $settings['marginRight'] . 'mm' : '20mm';
 
             // Base CSS
+            $bookosPath = FCPATH . 'assets/BOOKOS.TTF';
+            $bookosbPath = FCPATH . 'assets/BOOKOSB.TTF';
+            
             $css = "<style>
-                body {
-                    font-family: 'Times New Roman', Times, serif;
-                    font-size: 12pt;
-                    line-height: 1.5;
-                }
-                table { border-collapse: collapse; width: 100%; }
-                td, th { padding: 0; vertical-align: top; }
-                img { max-width: 100%; }
-                
-                /* Utilities */
-                .text-center { text-align: center; }
-                .text-right { text-align: right; }
-                .text-justify { text-align: justify; }
-                .font-bold { font-weight: bold; }
+            @font-face {
+                font-family: 'Bookman Old Style';
+                src: url('{$bookosPath}') format('truetype');
+                font-weight: normal;
+                font-style: normal;
+            }
+            @font-face {
+                font-family: 'Bookman Old Style';
+                src: url('{$bookosbPath}') format('truetype');
+                font-weight: bold;
+                font-style: normal;
+            }
+
+            body {
+                font-family: 'Bookman Old Style', serif;
+                font-size: 12pt;
+                line-height: 1.5;
+            }
+            table { border-collapse: collapse; width: 100%; }
+            td, th { padding: 0; vertical-align: top; }
+            img { max-width: 100%; }
+            
+            /* Utilities */
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .text-justify { text-align: justify; }
+            .font-bold { font-weight: bold; }
                 .uppercase { text-transform: uppercase; }
                 .underline { text-decoration: underline; }
                 .italic { font-style: italic; }

@@ -68,6 +68,20 @@
             scrollbar-width: none;
         }
 
+        /* Custom Fonts */
+        @font-face {
+            font-family: 'Bookman Old Style';
+            src: url('<?php echo base_url('assets/BOOKOS.TTF'); ?>') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'Bookman Old Style';
+            src: url('<?php echo base_url('assets/BOOKOSB.TTF'); ?>') format('truetype');
+            font-weight: bold;
+            font-style: normal;
+        }
+
         /* A4 Paper Base */
         .paper-preview {
             background: white;
@@ -77,7 +91,7 @@
             margin: 0 auto;
             position: relative;
             transition: all 0.3s ease;
-            font-family: "Times New Roman", Times, serif;
+            font-family: 'Bookman Old Style', serif;
             font-size: 12pt;
             line-height: 1.5;
             color: black;
@@ -575,10 +589,41 @@
         </div>
 
         <!-- 2. Visible Pagination Container -->
-        <div id="pagination-container" class="flex flex-col items-center space-y-8 pb-10 transition-transform duration-200 origin-top" :style="{ transform: 'scale(' + zoomScale + ')' }">
+        <div id="pagination-container" class="flex flex-col items-center space-y-8 pb-10 transition-transform duration-200 origin-top font-bookman" :style="{ transform: 'scale(' + zoomScale + ')' }">
             <!-- Pages will be injected here by JS -->
         </div>
     </div>
+
+    <style>
+        .font-bookman {
+            font-family: 'Bookman Old Style', serif;
+        }
+        /* Ensure pages always use the font */
+        .paper-page {
+            font-family: 'Bookman Old Style', serif !important;
+        }
+        @media print {
+            body {
+                background-color: white !important;
+                -webkit-print-color-adjust: exact;
+            }
+            .paper-page, div.paper-page {
+                box-shadow: none !important;
+                margin: 0 !important;
+                border: none !important;
+                width: 100% !important;
+                page-break-after: always;
+            }
+            /* Hide controls & sidebar */
+            .no-print, aside, nav, .zoom-controls { display: none !important; }
+            
+            /* Hide the grey background wrapper */
+            .bg-slate-200\/50 {
+                background-color: white !important;
+            }
+            #raw-content { display: none !important; }
+        }
+    </style>
 
 </div>
 

@@ -419,19 +419,39 @@ createApp({
 
             // 4. INJECT ATTACHMENTS (LAMPIRAN)
             if (formData.attachments && formData.attachments.length > 0) {
+                // Roman Numeral Helper
+                const toRoman = (num) => {
+                    const lookup = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
+                    let roman = '';
+                    for (let i in lookup) {
+                        while (num >= lookup[i]) {
+                            roman += i;
+                            num -= lookup[i];
+                        }
+                    }
+                    return roman;
+                };
+
+                const totalAtth = formData.attachments.length;
+
                 formData.attachments.forEach((att, index) => {
                     const noSK = formData.no_sk || '...';
                     const tanggalIndo = formData.tanggal_indo || '...';
                     const pejabatJabatan = (formData.jabatan_penandatangan || 'PEJABAT').toUpperCase();
 
+                    let lampiranLabel = 'LAMPIRAN';
+                    if (totalAtth > 1) {
+                        lampiranLabel += ' ' + toRoman(index + 1);
+                    }
+
                     const lampiranHtml = `
                         <div class="smart-attachment-break" data-title="${att.title || 'Lampiran'}"></div>
-                        <div class="attachment-header" style="float: right; text-align: left; width: 50%; margin-bottom: 20px; font-size: ${globalSettings.fontSize || '12pt'}; line-height: 1.5;">
+                        <div class="attachment-header" style="float: right; text-align: left; width: 75%; margin-bottom: 20px; font-size: 10pt; line-height: 1.2;">
                             <table>
                                 <tr>
-                                    <td style="vertical-align: top;">LAMPIRAN</td>
-                                    <td style="vertical-align: top;">:</td>
-                                    <td>KEPUTUSAN ${pejabatJabatan}</td>
+                                    <td style="vertical-align: top; white-space: nowrap; width: 1%;">${lampiranLabel}</td>
+                                    <td style="vertical-align: top; width: 1%; padding: 0 5px;">:</td>
+                                    <td style="vertical-align: top;">KEPUTUSAN ${pejabatJabatan}<br>TENTANG ${(formData.judul_sk || formData.tentang || '').toUpperCase()}</td>
                                 </tr>
                                 <tr>
                                     <td style="vertical-align: top;">NOMOR</td>
@@ -511,7 +531,7 @@ createApp({
                     content_css: isDark ? 'dark' : 'default',
                     plugins: 'table lists advlist',
                     toolbar: 'undo redo | bold italic | alignleft aligncenter alignright | bullist numlist | table',
-                    content_style: 'body { font-family:Times New Roman,Times,serif; font-size:12pt; } table { width: 100% !important; border-collapse: collapse; } td, th { border: 1px solid #000; padding: 4px; vertical-align: top; }',
+                    content_style: "@font-face { font-family: 'Bookman Old Style'; src: url('" + siteUrl.value + "assets/BOOKOS.TTF') format('truetype'); font-weight: normal; } @font-face { font-family: 'Bookman Old Style'; src: url('" + siteUrl.value + "assets/BOOKOSB.TTF') format('truetype'); font-weight: bold; } body { font-family: 'Bookman Old Style', serif; font-size:12pt; } table { width: 100% !important; border-collapse: collapse; } td, th { border: 1px solid #000; padding: 4px; vertical-align: top; }",
                     setup: (editor) => {
                         // Set initial value
                         editor.on('init', () => {
@@ -792,7 +812,8 @@ createApp({
             <head><meta charset='utf-8'><title>Export Word</title>
             <style>
                 /* Reset */
-                body { font-family: 'Times New Roman', serif; font-size: 12pt; margin: 0; padding: 0; }
+                /* Reset */
+                body { font-family: 'Bookman Old Style', serif; font-size: 12pt; margin: 0; padding: 0; }
                 
                 /* Layout & Typography */
                 table { border-collapse: collapse; width: 100%; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
@@ -988,6 +1009,8 @@ createApp({
                 // TYPOGRAPHY
                 page.style.fontSize = globalSettings.fontSize || '12pt';
                 page.style.lineHeight = globalSettings.lineHeight || '1.5';
+                page.style.fontFamily = "'Bookman Old Style', serif"; // Force Font
+
 
                 page.dataset.pageNum = pageCount;
 
