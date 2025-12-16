@@ -8,12 +8,12 @@ createApp({
         // as we now use the dedicated "Penandatangan" sidebar section.
         if (config.value && Array.isArray(config.value)) {
             // FORCE HIDE Signatory Derived Fields (User Request)
-            config.value.forEach(section => {
+            config.value.forEach((section, index) => {
                 if (section.fields) {
                     section.fields.forEach(field => {
                         // Hide all position-related fields and any field with "jabatan" in variable name or label
-                        if (['jabatan_penandatangan', 'nama_penandatangan', 'nip_penandatangan', 'jabatan_penandatangan_select', 'jabatan_selector'].includes(field.variable) || 
-                            field.type === 'select_jabatan' || 
+                        if (['jabatan_penandatangan', 'nama_penandatangan', 'nip_penandatangan', 'jabatan_penandatangan_select', 'jabatan_selector'].includes(field.variable) ||
+                            field.type === 'select_jabatan' ||
                             field.type === 'select_pejabat' ||
                             (field.variable && field.variable.includes('jabatan')) ||
                             (field.label && field.label.toLowerCase().includes('pilih jabatan'))) {
@@ -21,6 +21,18 @@ createApp({
                         }
                         // removed Force Readonly Display for Selector block
                     });
+                }
+
+                // Inject "Sembunyikan NIP" Checkbox into Section 3 (Index 2)
+                if (index === 2 && section.fields) {
+                    // Check if not already added
+                    if (!section.fields.find(f => f.variable === 'hide_nip')) {
+                        section.fields.push({
+                            type: 'checkbox',
+                            variable: 'hide_nip',
+                            label: 'Sembunyikan NIP'
+                        });
+                    }
                 }
             });
         }
@@ -60,6 +72,23 @@ createApp({
 
         // Theme Logic
         const isDarkMode = ref(localStorage.getItem('sk_editor_theme') === 'dark');
+
+        // UI State (New)
+        const isSidebarOpen = ref(false); // Mobile sidebar state
+        const activeSections = ref([0]); // Accordion state (default first open)
+
+        const toggleSidebar = () => {
+            isSidebarOpen.value = !isSidebarOpen.value;
+        };
+
+        const toggleSection = (index) => {
+            const i = activeSections.value.indexOf(index);
+            if (i > -1) {
+                activeSections.value.splice(i, 1); // Close
+            } else {
+                activeSections.value.push(index); // Open
+            }
+        };
 
         // selectedPejabatId removed - no longer needed for auto-population
 
@@ -295,9 +324,43 @@ createApp({
             // 1. Simple Replacements (FormData)
             for (const [key, value] of Object.entries(formData)) {
                 if (Array.isArray(value)) continue;
+
+                // Special Handling: Hide NIP
+                if (key === 'nip_penandatangan' && formData.hide_nip) {
+                    // Replace NIP variable with empty string
+                    const regex = new RegExp(`{{${key}}}`, 'g');
+                    html = html.replace(regex, '');
+
+                    // Also try to remove standard NIP labels if they exist right before it
+                    // Case 1: "NIP. {{nip_penandatangan}}"
+                    html = html.replace(/NIP\.\s*$/gm, ''); // This is risky regex, better handled below
+                    html = html.replace(/NIP\.\s*<br>/g, '<br>'); // Cleanup empty NIP label lines
+                    html = html.replace(/NIP\./g, (match, offset, string) => {
+                        // Check if followed by empty space (where nip variable was)
+                        // This is tricky without dom parsing. 
+                        // Simplest: Just replace the variable. If label remains, user sees "NIP. "
+                        return match;
+                    });
+
+                    // Specific fix for "NIP. " leaving a dangling label
+                    // We'll replace "NIP. " with "" if it's followed by nothing or a break
+                    // But since we just replaced the variable with '', we look for "NIP. "
+                    // Let's rely on visual check or more aggressive replacement if needed.
+                    // Ideally we replace "NIP. {{nip_penandatangan}}" as a block if possible?
+                    // But {{nip_penandatangan}} is already replaced by loop start. 
+
+                    continue;
+                }
+
                 const regex = new RegExp(`{{${key}}}`, 'g');
                 const formattedValue = String(value).replace(/\n/g, '<br>');
                 html = html.replace(regex, formattedValue);
+            }
+
+            // Clean up dangling "NIP. " if hide_nip is on
+            if (formData.hide_nip) {
+                html = html.replace(/NIP\.\s*(?=<)/g, ''); // Remove "NIP. " if followed by tag (like <br>)
+                html = html.replace(/NIP\.\s*$/gm, '');   // Remove "NIP. " at end of lines
             }
 
             // 1b. Global Settings Replacements
@@ -531,7 +594,7 @@ createApp({
                     // Set both variables for compatibility
                     formData.skContentLogo = dataUrl;
                     formData.logo_tengah = dataUrl;
-                    
+
                     // Set width for both variables
                     if (!formData.skContentLogoWidth) formData.skContentLogoWidth = 100;
                     if (!formData.logo_tengah_width) formData.logo_tengah_width = 100;
@@ -1093,7 +1156,13 @@ createApp({
             fixAutoFormatting,
             pejabatList,
             paginate,
-            handleContentLogoUpload
+            handleContentLogoUpload,
+            handleLogoUpload,
+            handleGenericImageUpload,
+            isSidebarOpen,
+            toggleSidebar,
+            activeSections,
+            toggleSection
         };
     }
 }).mount('#app');

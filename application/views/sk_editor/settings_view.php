@@ -25,19 +25,20 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>[v-cloak] { display: none; }</style>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 min-h-screen text-slate-900 dark:text-gray-100 font-sans transition-colors duration-200">
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen flex flex-col text-slate-900 dark:text-gray-100 font-sans transition-colors duration-200">
 
-<div id="app" v-cloak class="container mx-auto px-4 py-8 max-w-5xl">
+<div id="app" v-cloak class="container mx-auto px-4 py-8 max-w-5xl flex-1">
     
     <!-- Header -->
-    <div class="flex justify-between items-center mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
-        <div class="flex items-center">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
+        <div class="flex items-center mb-4 md:mb-0">
             <a href="<?php echo site_url('sk_editor'); ?>" class="text-gray-500 hover:text-indigo-600 dark:hover:text-white mr-4 transition flex items-center font-medium">
                 <i class="fas fa-arrow-left mr-2"></i> Templates
             </a>
             <h1 class="text-2xl font-bold">Settings</h1>
         </div>
-        <div class="flex items-center space-x-2">
+        <div class="flex justify-center items-center gap-2 w-full md:w-auto">
             <button @click="toggleTheme" class="w-10 h-10 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow-sm flex items-center justify-center">
                 <i class="fas" :class="isDarkMode ? 'fa-sun text-yellow-400' : 'fa-moon text-gray-400'"></i>
             </button>
@@ -228,7 +229,7 @@
                 </div>
 
                 <!-- List -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead class="bg-gray-50 dark:bg-gray-700/50 text-xs uppercase text-gray-500 dark:text-gray-400">
                             <tr>
@@ -289,7 +290,7 @@
                 </div>
 
                 <!-- List -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead class="bg-gray-50 dark:bg-gray-700/50 text-xs uppercase text-gray-500 dark:text-gray-400">
                             <tr>
@@ -314,6 +315,12 @@
             </div>
         </div>
     </div>
+</div>
+
+<div class="mt-auto border-t border-gray-200 dark:border-gray-700 pt-6 pb-6 text-center bg-gray-50 dark:bg-gray-900">
+    <p class="text-xs text-gray-400 dark:text-gray-500 font-medium">
+        Developed by Rahmat Triadi, S.Kom. &copy; <?= date('Y') ?>
+    </p>
 </div>
 
 <script>

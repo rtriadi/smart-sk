@@ -42,9 +42,9 @@
         [v-cloak] { display: none; }
     </style>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 min-h-screen text-slate-900 dark:text-gray-100 font-sans transition-colors duration-200">
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen flex flex-col text-slate-900 dark:text-gray-100 font-sans transition-colors duration-200">
 
-<div id="app" v-cloak class="container mx-auto px-4 py-8">
+<div id="app" v-cloak class="container mx-auto px-4 py-8 flex-1">
     
     <!-- Header -->
     <div class="flex justify-between items-center mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 transition-colors duration-200">
@@ -78,7 +78,7 @@
     </div>
 
     <!-- Table -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors duration-200">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden overflow-x-auto transition-colors duration-200">
         <table class="w-full text-left border-collapse">
             <thead>
                 <tr class="bg-gray-50 dark:bg-gray-700/50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
@@ -121,6 +121,12 @@
         </table>
     </div>
 
+</div>
+
+<div class="mt-auto border-t border-gray-200 dark:border-gray-700 pt-6 pb-6 text-center bg-gray-50 dark:bg-gray-900">
+    <p class="text-xs text-gray-400 dark:text-gray-500 font-medium">
+        Developed by Rahmat Triadi, S.Kom. &copy; <?= date('Y') ?>
+    </p>
 </div>
 
     <!-- Vue App Logic -->

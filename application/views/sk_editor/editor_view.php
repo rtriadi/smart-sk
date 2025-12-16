@@ -212,12 +212,32 @@
 </head>
 <body class="bg-slate-50 dark:bg-gray-900 h-screen overflow-hidden text-sm font-sans transition-colors duration-200">
 
-<div id="app" v-cloak class="flex h-full">
+<div id="app" v-cloak class="flex h-full pt-14 md:pt-0">
+
+    <!-- Mobile Header (Visible on small screens) -->
+    <div class="md:hidden fixed top-0 w-full z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 h-14 flex items-center justify-between px-4 transition-colors duration-200">
+        <div class="flex items-center text-slate-800 dark:text-white font-bold text-lg">
+            <button @click="toggleSidebar" class="mr-3 text-gray-600 dark:text-gray-300 focus:outline-none">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+            <i class="fas fa-file-signature text-indigo-600 dark:text-blue-500 mr-2"></i> Smart Editor
+        </div>
+        <div>
+             <!-- Theme Toggle (Mobile) -->
+             <button @click="toggleTheme" class="text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-yellow-400 transition" title="Toggle Theme">
+                <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div v-show="isSidebarOpen" @click="toggleSidebar" class="fixed inset-0 bg-black/50 z-20 md:hidden glass-effect transition-opacity"></div>
+
 
     <!-- Sidebar (Left) -->
-    <div class="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col shadow-lg z-10 transition-colors duration-200">
+    <div :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-30 w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col shadow-lg transform transition-transform duration-300 md:translate-x-0 md:static md:inset-auto ease-in-out">
         <!-- Header -->
-        <div class="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-4 justify-between transition-colors duration-200">
+        <div class="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-4 justify-between transition-colors duration-200 shrink-0">
             <div class="flex items-center text-slate-800 dark:text-white font-bold text-lg">
                 <i class="fas fa-file-signature text-indigo-600 dark:text-blue-500 mr-2"></i> Smart Editor
             </div>
@@ -413,12 +433,17 @@
                 </div>
 
                 <!-- Dynamic Form -->
+                <!-- Dynamic Form (Accordion) -->
                 <div v-for="(section, sIndex) in config" :key="sIndex" class="transition-colors duration-200">
-                    <h3 class="text-xs font-bold text-indigo-600 dark:text-blue-400 uppercase tracking-wider mb-3 border-b border-gray-200 dark:border-gray-700 pb-1 flex items-center">
-                    <span class="mr-2 px-2 py-0.5 bg-indigo-50 dark:bg-blue-900/30 rounded text-indigo-700 dark:text-blue-300">{{sIndex + 1}}</span> {{ section.section }}
-                    </h3>
+                    <button @click="toggleSection(sIndex)" class="w-full text-left text-xs font-bold text-indigo-600 dark:text-blue-400 uppercase tracking-wider mb-2 border-b border-gray-200 dark:border-gray-700 pb-2 flex items-center justify-between outline-none hover:bg-slate-50 dark:hover:bg-gray-800/50 rounded px-1 transition-colors">
+                        <div class="flex items-center">
+                             <span class="mr-2 px-2 py-0.5 bg-indigo-50 dark:bg-blue-900/30 rounded text-indigo-700 dark:text-blue-300">{{sIndex + 1}}</span> {{ section.section }}
+                        </div>
+                        <i class="fas fa-chevron-down transition-transform duration-200" :class="{'rotate-180': activeSections.includes(sIndex)}"></i>
+                    </button>
 
-                    <div class="space-y-4 mb-6" v-if="section && section.fields">
+
+                    <div class="space-y-4 mb-6" v-if="section && section.fields" v-show="activeSections.includes(sIndex)">
                     <div v-for="(field, fIndex) in section.fields" :key="fIndex" v-show="field.type !== 'hidden'">
                         <label v-if="field.type !== 'checkbox'" class="block text-gray-600 dark:text-gray-300 text-xs mb-1 font-medium">{{ field.label }}</label>
                         
@@ -515,6 +540,12 @@
             <button @click="exportPdf" class="bg-red-600 hover:bg-red-700 text-white py-2 rounded shadow-md font-semibold transition flex items-center justify-center">
                 <i class="fas fa-file-pdf mr-2"></i> PDF
             </button>
+            <!-- Developer Footer -->
+            <div class="col-span-2 text-center pt-2">
+                <p class="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                    Developed by Rahmat Triadi, S.Kom. &copy; <?php echo date('Y'); ?>
+                </p>
+            </div>
             <!-- Hidden button for ID storage hack -->
             <div id="btn-print-hidden" data-id="" style="display:none;"></div>
         </div>

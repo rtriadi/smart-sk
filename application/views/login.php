@@ -84,6 +84,13 @@
         <div class="w-full md:w-1/2 p-10 md:p-14 flex flex-col justify-center bg-white">
             
             <div class="mb-10 text-center md:text-left">
+                <!-- Mobile Logo (Visible on small screens) -->
+                <div class="md:hidden flex justify-center mb-6">
+                    <div class="bg-blue-600 p-3 rounded-xl shadow-lg inline-flex">
+                        <i class="fas fa-file-signature text-white text-3xl"></i>
+                    </div>
+                </div>
+
                 <h3 class="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h3>
                 <p class="text-gray-500">Please enter your credentials to access the dashboard.</p>
             </div>
@@ -142,8 +149,8 @@
                 </div>
             </form>
 
-            <div class="mt-8 text-center text-xs text-gray-400">
-                Secure System &bull; Authorized Personnel Only
+            <div class="mt-8 text-center text-xs text-gray-500">
+                Developed by Rahmat Triadi, S.Kom. &copy; <?= date('Y') ?>
             </div>
         </div>
     </div>

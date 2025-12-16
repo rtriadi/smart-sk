@@ -48,8 +48,8 @@
 <div id="app" v-cloak class="container mx-auto px-4 py-8">
     
     <!-- Header -->
-    <div class="flex justify-between items-center mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 transition-colors duration-200">
-        <div class="flex items-center">
+    <div class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 transition-colors duration-200">
+        <div class="flex items-center mb-4 md:mb-0">
             <div class="bg-indigo-600 dark:bg-blue-600 p-2 rounded-lg shadow-lg mr-4 transition-colors duration-200">
                 <i class="fas fa-file-signature text-white text-2xl"></i>
             </div>
@@ -58,22 +58,22 @@
                 <p class="text-slate-500 dark:text-gray-400 text-sm">Create official decrees efficiently</p>
             </div>
         </div>
-        <div class="flex items-center space-x-3">
+        <div class="flex flex-wrap justify-center items-center gap-2 w-full md:w-auto">
              <!-- Theme Toggle -->
-            <button @click="toggleTheme" class="w-10 h-10 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-yellow-400 shadow-sm transition flex items-center justify-center mr-2" title="Toggle Theme">
+            <button @click="toggleTheme" class="w-10 h-10 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-yellow-400 shadow-sm transition flex items-center justify-center" title="Toggle Theme">
                 <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
             </button>
 
-            <a href="<?php echo site_url('templates'); ?>" class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-4 py-2 rounded shadow-sm transition flex items-center font-medium">
-                <i class="fas fa-layer-group mr-2"></i> Templates
+            <a href="<?php echo site_url('templates'); ?>" class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-3 md:px-4 py-2 rounded shadow-sm transition flex items-center font-medium">
+                <i class="fas fa-layer-group md:mr-2"></i> <span class="hidden md:inline-block">Templates</span>
             </a>
-            <a :href="manageUrl()" class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-4 py-2 rounded shadow-sm transition flex items-center font-medium">
-                <i class="fas fa-cog mr-2"></i> Settings
+            <a :href="manageUrl()" class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-3 md:px-4 py-2 rounded shadow-sm transition flex items-center font-medium">
+                <i class="fas fa-cog md:mr-2"></i> <span class="hidden md:inline-block">Settings</span>
             </a>
-            <a href="<?php echo site_url('sk_editor/archives'); ?>" class="bg-indigo-600 hover:bg-indigo-700 dark:bg-green-700 dark:hover:bg-green-600 text-white px-4 py-2 rounded shadow-md transition flex items-center font-medium">
-                <i class="fas fa-archive mr-2"></i> Saved Drafts
+            <a href="<?php echo site_url('sk_editor/archives'); ?>" class="bg-indigo-600 hover:bg-indigo-700 dark:bg-green-700 dark:hover:bg-green-600 text-white px-3 md:px-4 py-2 rounded shadow-md transition flex items-center font-medium">
+                <i class="fas fa-archive md:mr-2"></i> <span class="hidden md:inline-block">Saved Drafts</span>
             </a>
-            <a href="<?php echo site_url('auth/logout'); ?>" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow-md transition flex items-center font-medium" title="Logout">
+            <a href="<?php echo site_url('auth/logout'); ?>" class="bg-red-500 hover:bg-red-600 text-white px-3 md:px-4 py-2 rounded shadow-md transition flex items-center font-medium" title="Logout">
                 <i class="fas fa-sign-out-alt"></i>
             </a>
         </div>
@@ -118,6 +118,14 @@
         </div>
         <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-2">No templates found</h3>
         <p class="text-slate-500 dark:text-gray-400">Try adjusting your search query.</p>
+    </div>
+
+    <!-- Footer -->
+    <!-- Footer -->
+    <div class="mt-auto border-t border-gray-200 dark:border-gray-700 pt-6 text-center">
+        <p class="text-xs text-gray-400 dark:text-gray-500 font-medium">
+            Developed by Rahmat Triadi, S.Kom. &copy; <?= date('Y') ?>
+        </p>
     </div>
 
 </div>

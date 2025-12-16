@@ -25,25 +25,28 @@
         .ace-editor { height: 400px; border-radius: 0.5rem; }
     </style>
 </head>
-<body class="bg-gray-900 min-h-screen text-gray-100 font-sans">
+<body class="bg-gray-900 min-h-screen flex flex-col text-gray-100 font-sans">
 
-<div id="app" v-cloak class="container mx-auto px-4 py-8">
+<div id="app" v-cloak class="container mx-auto px-4 py-8 flex-1">
     
     <!-- Header -->
-    <div class="flex justify-between items-center mb-8 border-b border-gray-700 pb-4">
-        <div class="flex items-center">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-gray-700 pb-4">
+        <div class="flex items-center mb-4 md:mb-0">
             <a :href="cancelUrl()" class="text-gray-400 hover:text-white mr-4 transition">
                 <i class="fas fa-arrow-left"></i>
             </a>
             <h1 class="text-2xl font-bold text-white">Create New Template</h1>
         </div>
-        <div class="flex gap-3">
-            <a :href="cancelUrl()" class="px-4 py-2 rounded text-gray-300 hover:bg-gray-800 transition">Cancel</a>
-            <button @click="showHelp = true" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded font-bold transition flex items-center mr-2">
-                <i class="fas fa-question-circle mr-2"></i> Panduan
+        <div class="flex flex-wrap justify-center gap-2 w-full md:w-auto">
+            <a :href="cancelUrl()" class="px-4 py-2 rounded text-gray-300 hover:bg-gray-800 transition text-center">
+                <i class="fas fa-times md:hidden"></i> <span class="hidden md:inline">Cancel</span>
+            </a>
+            <button @click="showHelp = true" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded font-bold transition flex items-center">
+                <i class="fas fa-question-circle md:mr-2"></i> <span class="hidden md:inline">Panduan</span>
             </button>
             <button @click="saveTemplate" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded font-bold transition flex items-center">
-                <i class="fas fa-save mr-2"></i> Save Template
+                <i class="fas fa-save md:mr-2"></i> <span class="hidden md:inline">Save Template</span>
             </button>
         </div>
     </div>
@@ -247,7 +250,11 @@
     </div>
 </div>
 
-
+<div class="mt-auto border-t border-gray-700 pt-6 pb-6 text-center bg-gray-900">
+    <p class="text-xs text-gray-400 font-medium">
+        Developed by Rahmat Triadi, S.Kom. &copy; <?= date('Y') ?>
+    </p>
+</div>
 
 <!-- Vue Logic -->
 <script src="<?php echo base_url('assets/js/template_form_vue.js'); ?>"></script>
