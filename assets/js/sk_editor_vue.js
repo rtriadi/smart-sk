@@ -159,6 +159,38 @@ createApp({
             }
         };
 
+        const saveAsDefault = () => {
+            try {
+                // Save current globalSettings to localStorage
+                localStorage.setItem('sk_editor_settings', JSON.stringify(globalSettings));
+                toastr.success('Settings saved as your default for new documents.', 'Defaults Saved');
+            } catch (e) {
+                console.error('Failed to save defaults:', e);
+                toastr.error('Could not save settings to local storage.');
+            }
+        };
+
+        const initializeSettings = () => {
+            // 1. Always attempt to load from LocalStorage first (User Defaults)
+            const savedSettings = localStorage.getItem('sk_editor_settings');
+            if (savedSettings) {
+                try {
+                    const parsed = JSON.parse(savedSettings);
+                    Object.assign(globalSettings, parsed);
+                } catch (e) { console.error('Settings parse error:', e); }
+            }
+
+            // 2. If Draft Settings exist (Edit Mode), override
+            if (DRAFT_SETTINGS && typeof DRAFT_SETTINGS === 'object' && Object.keys(DRAFT_SETTINGS).length > 0) {
+                Object.assign(globalSettings, DRAFT_SETTINGS);
+            }
+
+            // Apply Default SK Content Logo (if New Draft and global setting exists)
+            if (!DRAFT_DATA && globalSettings.defaultSkLogo && !formData.skContentLogo) {
+                formData.skContentLogo = globalSettings.defaultSkLogo;
+                if (!formData.skContentLogoWidth) formData.skContentLogoWidth = 100;
+            }
+        };
 
         // --- Initialization ---
         onMounted(() => {
@@ -210,33 +242,12 @@ createApp({
             }
 
             // Load Global Settings
-            if (DRAFT_SETTINGS) {
-                Object.assign(globalSettings, DRAFT_SETTINGS);
-            } else {
-                const savedSettings = localStorage.getItem('sk_editor_settings');
-                if (savedSettings) {
-                    try {
-                        const parsed = JSON.parse(savedSettings);
-                        Object.assign(globalSettings, parsed);
-
-                        // Apply Default SK Logo if new draft (no existing SK Logo)
-                        if (!DRAFT_DATA && parsed.defaultSkLogo && !formData.skContentLogo) {
-                            formData.skContentLogo = parsed.defaultSkLogo;
-                            if (!formData.skContentLogoWidth) formData.skContentLogoWidth = 100;
-                        }
-                    } catch (e) { console.error(e); }
-                }
-            }
+            initializeSettings();
         });
 
-        // Watch Global Settings for Persistence
-        watch(globalSettings, (newSettings) => {
-            try {
-                localStorage.setItem('sk_editor_settings', JSON.stringify(newSettings));
-            } catch (e) {
-                console.warn('LocalStorage access failed:', e);
-            }
-        }, { deep: true });
+        // Watch Global Settings for Persistence - REMOVED
+        // This was causing Draft-specific settings to overwrite User Defaults (LocalStorage)
+        // Replaced by saveAsDefault() manual action.
 
         // --- Watchers for Smart Logic ---
         // Position selection methods removed - using auto-population only
@@ -1208,7 +1219,8 @@ createApp({
             zoomScale,
             zoomIn,
             zoomOut,
-            resetZoom
+            resetZoom,
+            saveAsDefault
         };
     }
 }).mount('#app');

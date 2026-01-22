@@ -16,6 +16,9 @@
 
     <script>
         var TEMPLATE_DATA = <?php echo json_encode($template); ?>;
+        // CRITICAL: Initialize global for Template Builder
+        var TEMPLATE_INITIAL_DATA = TEMPLATE_DATA;
+        
         var CATEGORIES = <?php echo json_encode($categories); ?>;
         var SITE_URL = '<?php echo site_url(); ?>';
         var IS_EDIT = true;
@@ -75,7 +78,7 @@
             </div>
 
             <!-- JSON Config Editor -->
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 flex flex-col h-[500px]">
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 flex flex-col h-[500px]" style="display:none;">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-bold text-yellow-400 uppercase tracking-wider">Form Config (JSON)</h3>
                     <span class="text-xs text-gray-500 bg-gray-900 px-2 py-1 rounded">JSON Mode</span>
@@ -86,13 +89,17 @@
 
         <!-- Right Column: HTML Editor -->
         <div class="lg:col-span-2">
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 flex flex-col h-full min-h-[800px]">
+            <!-- Legacy Editor Hidden -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 flex flex-col h-full min-h-[800px]" style="display:none;">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-bold text-green-400 uppercase tracking-wider">HTML Pattern</h3>
                     <span class="text-xs text-gray-500 bg-gray-900 px-2 py-1 rounded">HTML Mode</span>
                 </div>
                 <div id="html-editor" class="ace-editor flex-1"></div>
             </div>
+
+            <!-- New Template Builder App -->
+            <div v-pre id="template-builder-app" class="h-full min-h-[800px]"></div>
         </div>
     </div>
 
@@ -103,6 +110,35 @@
         Developed by Rahmat Triadi, S.Kom. &copy; <?= date('Y') ?>
     </p>
 </div>
+
+<!-- Template Builder Logic -->
+<script src="<?php echo base_url('assets/js/template_builder_vue.js'); ?>"></script>
+
+<!-- Sync Logic -->
+<script>
+    setInterval(() => {
+        if (window.TemplateBuilderExport) {
+            // Sync HTML Pattern
+            if (window.TemplateBuilderExport.html_pattern !== undefined) {
+                try {
+                    var htmlEditor = ace.edit("html-editor");
+                    if (htmlEditor && htmlEditor.getValue() !== window.TemplateBuilderExport.html_pattern) {
+                        htmlEditor.setValue(window.TemplateBuilderExport.html_pattern, -1);
+                    }
+                } catch(e) {}
+            }
+            // Sync Form Config
+            if (window.TemplateBuilderExport.form_config !== undefined) {
+                try {
+                    var jsonEditor = ace.edit("json-editor");
+                    if (jsonEditor && jsonEditor.getValue() !== window.TemplateBuilderExport.form_config) {
+                        jsonEditor.setValue(window.TemplateBuilderExport.form_config, -1);
+                    }
+                } catch(e) {}
+            }
+        }
+    }, 1000);
+</script>
 
 <!-- Vue Logic -->
 <script src="<?php echo base_url('assets/js/template_form_vue.js'); ?>"></script>

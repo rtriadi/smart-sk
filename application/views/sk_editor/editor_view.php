@@ -396,6 +396,13 @@
                         <span class="text-xs text-gray-400">Tidak ada lampiran</span>
                     </div>
                 </div>
+
+                <!-- Save Defaults Button -->
+                <div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
+                    <button @click="saveAsDefault" class="w-full text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 py-1.5 rounded transition flex items-center justify-center" title="Save current margins, paper size, and typography as your default for new documents">
+                        <i class="fas fa-save mr-2"></i> Save Settings as Default
+                    </button>
+                </div>
             </div>
 
                 <!-- Page Appearance Settings (New) -->
