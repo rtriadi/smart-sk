@@ -51,6 +51,11 @@ class Sk_editor extends CI_Controller {
         $this->load->library('session');
     }
 
+    public function api_get_templates() {
+        $templates = $this->Template_model->get_all_templates();
+        echo json_encode($templates);
+    }
+
     public function index() {
         $data['archives'] = $this->Archive_model->get_all_archives();
         $data['templates'] = $this->Template_model->get_all_templates();
@@ -116,7 +121,11 @@ class Sk_editor extends CI_Controller {
         $this->load->view('layout/enterprise_layout', $layout_data);
     }
 
-    public function create($template_id) {
+    public function create($template_id = null) {
+        if (!$template_id) {
+            redirect('templates'); // Redirect to template manager to pick one
+            return;
+        }
         $template = $this->Template_model->get_template_by_id($template_id);
         if (!$template) {
             redirect('sk_editor');

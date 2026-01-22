@@ -229,16 +229,16 @@
 <div id="app" v-cloak class="flex h-full pt-14 md:pt-0">
 
     <!-- Mobile Header (Visible on small screens) -->
-    <div class="md:hidden fixed top-0 w-full z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 h-14 flex items-center justify-between px-4 transition-colors duration-200">
-        <div class="flex items-center text-slate-800 dark:text-white font-bold text-lg">
-            <button @click="toggleSidebar" class="mr-3 text-gray-600 dark:text-gray-300 focus:outline-none">
+    <div class="md:hidden fixed top-0 w-full z-20 bg-slate-900 border-b border-slate-800 h-14 flex items-center justify-between px-4 transition-colors duration-200">
+        <div class="flex items-center text-white font-bold text-lg">
+            <button @click="toggleSidebar" class="mr-3 text-slate-300 hover:text-white focus:outline-none">
                 <i class="fas fa-bars text-xl"></i>
             </button>
-            <i class="fas fa-file-signature text-indigo-600 dark:text-blue-500 mr-2"></i> Smart Editor
+            <i class="fas fa-file-signature text-teal-400 mr-2"></i> Smart Editor
         </div>
         <div>
              <!-- Theme Toggle (Mobile) -->
-             <button @click="toggleTheme" class="text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-yellow-400 transition" title="Toggle Theme">
+             <button @click="toggleTheme" class="text-slate-400 hover:text-white transition" title="Toggle Theme">
                 <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
             </button>
         </div>
@@ -251,17 +251,17 @@
     <!-- Sidebar (Left) -->
     <div :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-30 w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col shadow-lg transform transition-transform duration-300 md:translate-x-0 md:static md:inset-auto ease-in-out">
         <!-- Header -->
-        <div class="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-4 justify-between transition-colors duration-200 shrink-0">
-            <div class="flex items-center text-slate-800 dark:text-white font-bold text-lg">
-                <i class="fas fa-file-signature text-indigo-600 dark:text-blue-500 mr-2"></i> Smart Editor
+        <div class="h-14 bg-slate-900 border-b border-slate-800 flex items-center px-4 justify-between transition-colors duration-200 shrink-0">
+            <div class="flex items-center text-white font-bold text-lg">
+                <i class="fas fa-file-signature text-teal-400 mr-2"></i> Smart Editor
             </div>
-            <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-3">
                 <!-- Theme Toggle -->
-                <button @click="toggleTheme" class="text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-yellow-400 transition" title="Toggle Theme">
+                <button @click="toggleTheme" class="text-slate-400 hover:text-white transition" title="Toggle Theme">
                     <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
                 </button>
-                <a href="<?php echo site_url('sk_editor'); ?>" class="text-gray-400 hover:text-red-500 transition ml-2">
-                    <i class="fas fa-times"></i>
+                <a href="<?php echo site_url('sk_editor'); ?>" class="flex items-center text-slate-300 hover:text-white transition text-xs font-medium group" title="Back to Dashboard">
+                    <i class="fas fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i> <span>Back to Dashboard</span>
                 </a>
             </div>
         </div>
@@ -549,17 +549,17 @@
 
         <!-- Footer Actions -->
         <div class="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 grid grid-cols-2 gap-3 transition-colors duration-200">
-            <button @click="saveDraft" :disabled="isSaving" class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 rounded shadow-md font-semibold transition flex items-center justify-center">
+            <button @click="saveDraft" :disabled="isSaving" class="bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 rounded shadow-md font-semibold transition flex items-center justify-center">
                 <i class="fas" :class="isSaving ? 'fa-spinner fa-spin' : 'fa-save'"></i> <span class="ml-2">{{ isSaving ? 'Saving...' : 'Save' }}</span>
             </button>
-            <button @click="printPdf" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded shadow-md font-semibold transition flex items-center justify-center">
+            <button @click="printPdf" class="bg-slate-700 hover:bg-slate-800 text-white py-2 rounded shadow-md font-semibold transition flex items-center justify-center">
                 <i class="fas fa-print mr-2"></i> Print
             </button>
-            <button @click="exportWord" class="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded shadow-md font-semibold transition flex items-center justify-center">
-                <i class="fas fa-file-word mr-2"></i> Word
+            <button @click="exportWord" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 py-2 rounded shadow-sm font-semibold transition flex items-center justify-center">
+                <i class="fas fa-file-word mr-2 text-blue-600"></i> Word
             </button>
-            <button @click="exportPdf" class="bg-red-600 hover:bg-red-700 text-white py-2 rounded shadow-md font-semibold transition flex items-center justify-center">
-                <i class="fas fa-file-pdf mr-2"></i> PDF
+            <button @click="exportPdf" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 py-2 rounded shadow-sm font-semibold transition flex items-center justify-center">
+                <i class="fas fa-file-pdf mr-2 text-red-600"></i> PDF
             </button>
             <!-- Developer Footer -->
             <div class="col-span-2 text-center pt-2">

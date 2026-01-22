@@ -49,6 +49,11 @@
 
         <!-- Navigation -->
         <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+            <button id="btnBuatSK" class="w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded mb-6 flex items-center justify-center gap-2 shadow-lg hover:shadow-teal-500/30 transition-all">
+                <i class="fa-solid fa-plus"></i>
+                <span>Buat SK Baru</span>
+            </button>
+
             <?php 
             $ci =& get_instance();
             $segment = $ci->uri->segment(2); // e.g. sk_editor/archives -> archives
@@ -147,5 +152,99 @@
         
     </div>
 
+    <!-- Template Modal -->
+    <div id="templateModal" class="relative z-[60] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+
+        <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
+            <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+                    <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-teal-100 sm:mx-0 sm:h-10 sm:w-10">
+                                <i class="fa-solid fa-file-lines text-teal-600"></i>
+                            </div>
+                            <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
+                                <h3 class="text-base font-semibold leading-6 text-gray-900" id="modal-title">Pilih Template SK</h3>
+                                <div class="mt-2">
+                                    <p class="text-sm text-gray-500 mb-4">Silakan pilih template surat keputusan yang ingin Anda buat.</p>
+                                    <select id="templateSelect" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm sm:leading-6">
+                                        <option value="">Memuat template...</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                        <button type="button" id="btnLanjut" class="inline-flex w-full justify-center rounded-md bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 sm:ml-3 sm:w-auto">Lanjut</button>
+                        <button type="button" id="btnCancel" class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto">Batal</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnOpen = document.getElementById('btnBuatSK');
+            const modal = document.getElementById('templateModal');
+            const btnCancel = document.getElementById('btnCancel');
+            const btnLanjut = document.getElementById('btnLanjut');
+            const select = document.getElementById('templateSelect');
+            
+            // Open Modal
+            if(btnOpen) {
+                btnOpen.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    modal.classList.remove('hidden');
+                    loadTemplates();
+                });
+            }
+            
+            // Close Modal
+            if(btnCancel) {
+                btnCancel.addEventListener('click', () => {
+                    modal.classList.add('hidden');
+                });
+            }
+            
+            // Load Templates
+            async function loadTemplates() {
+                select.innerHTML = '<option>Loading...</option>';
+                try {
+                    const res = await fetch('<?= site_url('sk_editor/api_get_templates') ?>');
+                    const data = await res.json();
+                    
+                    select.innerHTML = '';
+                    if(data.length === 0) {
+                        select.innerHTML = '<option value="">Tidak ada template tersedia</option>';
+                        return;
+                    }
+                    
+                    data.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = t.name;
+                        select.appendChild(opt);
+                    });
+                } catch(e) {
+                    console.error(e);
+                    select.innerHTML = '<option>Error loading templates</option>';
+                }
+            }
+            
+            // Lanjut
+            if(btnLanjut) {
+                btnLanjut.addEventListener('click', () => {
+                    const val = select.value;
+                    if(val) {
+                        window.location.href = '<?= site_url('sk_editor/create/') ?>' + val;
+                    } else {
+                        alert('Silakan pilih template terlebih dahulu');
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
