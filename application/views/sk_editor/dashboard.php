@@ -1,136 +1,125 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart SK Dashboard</title>
+<div class="space-y-6">
+    <?php
+    // Pre-calculate stats
+    $total_archives = count($archives);
+    $total_templates = count($templates);
     
-    <!-- Tailwind CSS (CDN) -->
-    <!-- Tailwind CSS (CDN) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        slate: {
-                            50: '#f8fafc',
-                            100: '#f1f5f9',
-                            200: '#e2e8f0',
-                            800: '#1e293b',
-                            900: '#0f172a',
-                        }
-                    }
-                }
-            }
+    $current_month = date('Y-m');
+    $this_month_count = 0;
+    $pending_count = 0;
+    
+    // Create template map for name lookup
+    $template_map = [];
+    foreach ($templates as $t) {
+        $template_map[$t->id] = $t->nama_sk;
+    }
+
+    foreach ($archives as $arc) {
+        // Count this month
+        if (isset($arc->created_at) && strpos($arc->created_at, $current_month) === 0) {
+            $this_month_count++;
         }
-    </script>
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Toastr & jQuery -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <!-- Vue 3 (CDN) -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+        
+        // Count pending (Drafts)
+        if (isset($arc->no_surat) && stripos($arc->no_surat, 'DRAFT') !== false) {
+            $pending_count++;
+        }
+    }
+    ?>
 
-    <script>
-        var TEMPLATES_DATA = <?php echo json_encode($templates); ?>;
-        var SITE_URL = '<?php echo rtrim(site_url(), "/") . "/"; ?>';
-    </script>
-    <style>
-        [v-cloak] { display: none; }
-    </style>
-</head>
-<body class="bg-gray-50 dark:bg-gray-900 min-h-screen text-slate-900 dark:text-gray-100 font-sans transition-colors duration-200">
-
-<div id="app" v-cloak class="container mx-auto px-4 py-8">
-    
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 transition-colors duration-200">
-        <div class="flex items-center mb-4 md:mb-0">
-            <div class="bg-indigo-600 dark:bg-blue-600 p-2 rounded-lg shadow-lg mr-4 transition-colors duration-200">
-                <i class="fas fa-file-signature text-white text-2xl"></i>
-            </div>
-            <div>
-                <h1 class="text-2xl font-bold text-slate-800 dark:text-white transition-colors duration-200">Smart SK Generator</h1>
-                <p class="text-slate-500 dark:text-gray-400 text-sm">Create official decrees efficiently</p>
-            </div>
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <!-- Card 1: Total Archives -->
+        <div class="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
+            <div class="text-slate-500 text-sm font-medium mb-1">Total Archives</div>
+            <div class="text-3xl font-bold text-slate-800"><?= $total_archives ?></div>
         </div>
-        <div class="flex flex-wrap justify-center items-center gap-2 w-full md:w-auto">
-             <!-- Theme Toggle -->
-            <button @click="toggleTheme" class="w-10 h-10 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-yellow-400 shadow-sm transition flex items-center justify-center" title="Toggle Theme">
-                <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
-            </button>
-
-            <a href="<?php echo site_url('templates'); ?>" class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-3 md:px-4 py-2 rounded shadow-sm transition flex items-center font-medium">
-                <i class="fas fa-layer-group md:mr-2"></i> <span class="hidden md:inline-block">Templates</span>
-            </a>
-            <a :href="manageUrl()" class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-3 md:px-4 py-2 rounded shadow-sm transition flex items-center font-medium">
-                <i class="fas fa-cog md:mr-2"></i> <span class="hidden md:inline-block">Settings</span>
-            </a>
-            <a href="<?php echo site_url('sk_editor/archives'); ?>" class="bg-indigo-600 hover:bg-indigo-700 dark:bg-green-700 dark:hover:bg-green-600 text-white px-3 md:px-4 py-2 rounded shadow-md transition flex items-center font-medium">
-                <i class="fas fa-archive md:mr-2"></i> <span class="hidden md:inline-block">Saved Drafts</span>
-            </a>
-            <a href="<?php echo site_url('auth/logout'); ?>" class="bg-red-500 hover:bg-red-600 text-white px-3 md:px-4 py-2 rounded shadow-md transition flex items-center font-medium" title="Logout">
-                <i class="fas fa-sign-out-alt"></i>
-            </a>
+        <!-- Card 2: Total Templates -->
+        <div class="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
+            <div class="text-slate-500 text-sm font-medium mb-1">Total Templates</div>
+            <div class="text-3xl font-bold text-slate-800"><?= $total_templates ?></div>
+        </div>
+        <!-- Card 3: This Month -->
+        <div class="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
+            <div class="text-slate-500 text-sm font-medium mb-1">This Month</div>
+            <div class="text-3xl font-bold text-slate-800"><?= $this_month_count ?></div>
+        </div>
+        <!-- Card 4: Pending -->
+        <div class="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
+            <div class="text-slate-500 text-sm font-medium mb-1">Pending</div>
+            <div class="text-3xl font-bold text-slate-800"><?= $pending_count ?></div>
         </div>
     </div>
 
-    <!-- Search -->
-    <div class="mb-8 relative max-w-lg mx-auto">
-        <span class="absolute inset-y-0 left-0 flex items-center pl-4">
-            <i class="fas fa-search text-gray-400"></i>
-        </span>
-        <input type="text" v-model="searchQuery" placeholder="Search templates..." 
-            class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-slate-900 dark:text-white rounded-full pl-11 pr-6 py-3 shadow-sm focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-blue-900 focus:outline-none transition-all duration-200">
-    </div>
-
-    <!-- Grid -->
-    <div v-if="filteredTemplates.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div v-for="t in filteredTemplates" :key="t.id" class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-xl border border-gray-100 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-blue-500 transition-all duration-300 flex flex-col transform hover:-translate-y-1">
-            <div class="p-6 flex-1">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="bg-indigo-50 dark:bg-blue-900/30 text-indigo-600 dark:text-blue-400 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide border border-indigo-100 dark:border-blue-800/50">
-                        {{ t.kategori }}
-                    </div>
-                    <i class="fas fa-file-alt text-gray-300 dark:text-gray-600 text-2xl group-hover:text-indigo-500 dark:group-hover:text-blue-500 transition-colors"></i>
+    <!-- Recent Archives Table -->
+    <div class="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center">
+            <h3 class="font-bold text-slate-800">Recent Documents</h3>
+            <a href="<?= site_url('sk_editor/archives') ?>" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 uppercase tracking-wide">View All</a>
+        </div>
+        
+        <?php if (empty($archives)): ?>
+            <!-- Empty State -->
+            <div class="py-12 text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+                    <i class="fas fa-file-signature text-slate-400 text-2xl"></i>
                 </div>
-                <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-2 leading-tight group-hover:text-indigo-700 dark:group-hover:text-blue-400 transition-colors">{{ t.nama_sk }}</h3>
-                <p class="text-slate-500 dark:text-gray-400 text-xs font-mono bg-gray-50 dark:bg-gray-900 p-2 rounded border border-gray-100 dark:border-gray-700 truncate">
-                    <i class="fas fa-hashtag mr-1 text-gray-300"></i> {{ t.nomor_pattern }}
-                </p>
+                <h3 class="text-lg font-medium text-slate-900">No documents created yet</h3>
+                <p class="mt-1 text-sm text-slate-500 max-w-sm mx-auto">Create your first Surat Keputusan by selecting a template from the templates menu.</p>
+                <div class="mt-6">
+                    <a href="<?= site_url('templates') ?>" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-plus mr-2"></i> Create New SK
+                    </a>
+                </div>
             </div>
-            <div class="p-4 bg-gray-50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 rounded-b-xl">
-                <a :href="createUrl(t.id)" class="block w-full bg-white dark:bg-blue-600 hover:bg-indigo-600 dark:hover:bg-blue-500 text-indigo-600 group-hover:text-white dark:text-white text-center font-bold py-2.5 rounded-lg border border-indigo-200 dark:border-transparent group-hover:border-indigo-600 transition-all shadow-sm group-hover:shadow-md">
-                    <i class="fas fa-plus mr-2"></i> Create SK
-                </a>
+        <?php else: ?>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">No. Surat</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Template</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-slate-200">
+                        <?php 
+                        // Sort by ID desc (newest first)
+                        $recent_archives = $archives;
+                        usort($recent_archives, function($a, $b) {
+                            return $b->id - $a->id;
+                        });
+                        $recent_archives = array_slice($recent_archives, 0, 5);
+                        
+                        foreach ($recent_archives as $archive): 
+                            $template_name = isset($template_map[$archive->template_id]) ? $template_map[$archive->template_id] : 'Unknown Template';
+                        ?>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                                    <?= isset($archive->no_surat) ? $archive->no_surat : '-' ?>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                        <?= $template_name ?>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                    <?= isset($archive->created_at) ? date('d M Y', strtotime($archive->created_at)) : '-' ?>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <a href="<?= site_url('sk_editor/edit_draft/' . $archive->id) ?>" class="text-indigo-600 hover:text-indigo-900 mr-3" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="<?= site_url('sk_editor/generate_pdf/' . $archive->id) ?>" target="_blank" class="text-slate-600 hover:text-red-600 mr-3" title="PDF">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
-        </div>
+        <?php endif; ?>
     </div>
-
-    <!-- Empty State -->
-    <div v-else class="text-center py-16">
-        <div class="inline-block p-6 rounded-full bg-gray-100 dark:bg-gray-800 mb-6 animate-pulse">
-            <i class="fas fa-search text-gray-400 dark:text-gray-500 text-4xl"></i>
-        </div>
-        <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-2">No templates found</h3>
-        <p class="text-slate-500 dark:text-gray-400">Try adjusting your search query.</p>
-    </div>
-
-    <!-- Footer -->
-    <!-- Footer -->
-    <div class="mt-auto border-t border-gray-200 dark:border-gray-700 pt-6 text-center">
-        <p class="text-xs text-gray-400 dark:text-gray-500 font-medium">
-            Developed by Rahmat Triadi, S.Kom. &copy; <?= date('Y') ?>
-        </p>
-    </div>
-
 </div>
-
-<!-- Vue Logic -->
-<script src="<?php echo base_url('assets/js/dashboard_vue.js'); ?>"></script>
-</body>
-</html>

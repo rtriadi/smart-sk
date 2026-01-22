@@ -7,6 +7,21 @@
     
     <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        navy: { 900: '#0f172a' },
+                        teal: { 500: '#14b8a6', 600: '#0d9488' }
+                    }
+                }
+            }
+        }
+    </script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Vue 3 (CDN) -->
@@ -28,24 +43,28 @@
         .ace-editor { height: 400px; border-radius: 0.5rem; }
     </style>
 </head>
-<body class="bg-gray-900 min-h-screen flex flex-col text-gray-100 font-sans">
+<body class="bg-navy-900 min-h-screen flex flex-col text-slate-100 font-sans">
 
 <div id="app" v-cloak class="container mx-auto px-4 py-8 flex-1">
     
     <!-- Header -->
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-gray-700 pb-4">
+    <div class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-slate-700 pb-4">
         <div class="flex items-center mb-4 md:mb-0">
-            <a :href="cancelUrl()" class="text-gray-400 hover:text-white mr-4 transition">
-                <i class="fas fa-arrow-left"></i>
+            <a href="<?php echo site_url('sk_editor'); ?>" class="text-slate-400 hover:text-teal-400 mr-4 transition flex items-center group">
+                <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-slate-700 transition">
+                    <i class="fas fa-arrow-left"></i>
+                </div>
             </a>
-            <h1 class="text-2xl font-bold text-white">Edit Template: {{ form.nama_sk }}</h1>
+            <div>
+                <h1 class="text-2xl font-bold text-white tracking-tight">Edit Template: {{ form.nama_sk }}</h1>
+                <p class="text-xs text-slate-400">Modify your template configuration</p>
+            </div>
         </div>
         <div class="flex flex-wrap justify-center gap-2 w-full md:w-auto">
-            <a :href="cancelUrl()" class="px-4 py-2 rounded text-gray-300 hover:bg-gray-800 transition text-center">
+            <a href="<?php echo site_url('sk_editor'); ?>" class="px-4 py-2 rounded text-slate-300 hover:bg-slate-800 transition text-center border border-transparent hover:border-slate-700">
                 <i class="fas fa-times md:hidden"></i> <span class="hidden md:inline">Cancel</span>
             </a>
-            <button @click="saveTemplate" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded font-bold transition flex items-center">
+            <button @click="saveTemplate" class="bg-teal-600 hover:bg-teal-500 text-white px-6 py-2 rounded font-bold transition flex items-center shadow-md shadow-teal-900/20">
                 <i class="fas fa-save md:mr-2"></i> <span class="hidden md:inline">Update Template</span>
             </button>
         </div>

@@ -54,14 +54,20 @@ class Sk_editor extends CI_Controller {
     public function index() {
         $data['archives'] = $this->Archive_model->get_all_archives();
         $data['templates'] = $this->Template_model->get_all_templates();
-        $this->load->view('sk_editor/dashboard', $data);
+        
+        // Wrap in enterprise layout
+        $layout_data['page_content'] = $this->load->view('sk_editor/dashboard', $data, TRUE);
+        $this->load->view('layout/enterprise_layout', $layout_data);
     }
 
     public function settings() {
         $this->load->model('Category_model');
         $data['categories'] = $this->Category_model->get_all();
         $data['pejabat'] = $this->Pejabat_model->get_all();
-        $this->load->view('sk_editor/settings_view', $data);
+        
+        // Wrap in enterprise layout
+        $layout_data['page_content'] = $this->load->view('sk_editor/settings_view', $data, TRUE);
+        $this->load->view('layout/enterprise_layout', $layout_data);
     }
 
     public function save_pejabat() {
@@ -104,7 +110,10 @@ class Sk_editor extends CI_Controller {
 
     public function archives() {
         $data['archives'] = $this->Archive_model->get_all_archives();
-        $this->load->view('sk_editor/archive_view', $data);
+        
+        // Wrap in enterprise layout
+        $layout_data['page_content'] = $this->load->view('sk_editor/archive_view', $data, TRUE);
+        $this->load->view('layout/enterprise_layout', $layout_data);
     }
 
     public function create($template_id) {

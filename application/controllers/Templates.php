@@ -15,7 +15,10 @@ class Templates extends CI_Controller {
 
     public function index() {
         $data['templates'] = $this->Template_model->get_all_templates();
-        $this->load->view('templates/manage_view', $data);
+        
+        // Wrap in enterprise layout
+        $layout_data['page_content'] = $this->load->view('templates/manage_view', $data, TRUE);
+        $this->load->view('layout/enterprise_layout', $layout_data);
     }
 
     public function create() {
