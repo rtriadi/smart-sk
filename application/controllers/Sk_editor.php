@@ -368,19 +368,16 @@ class Sk_editor extends CI_Controller {
         $data['globalSettings'] = $settings;
 
         // 1. CONVERT HANDLEBARS SYNTAX TO MUSTACHE
-        // {{#each var}}...{{/each}} -> {{#var}}...{{/var}}
-        $html = preg_replace_callback('/{{#each\s+(\w+)}}(.*?){{\/each}}/s', function($matches) {
-            $varName = $matches[1];
-            $content = $matches[2];
-            return '{{#' . $varName . '}}' . $content . '{{/' . $varName . '}}';
-        }, $html);
+        // Handle {{#each var}} -> {{#var}}
+        $html = preg_replace('/{{#each\s+([\w\.]+)\s*}}/', '{{#$1}}', $html);
+        $html = str_replace('{{/each}}', '{{/}}', $html);
         
-        // {{#if var}}...{{/if}} -> {{#var}}...{{/var}}
-        $html = preg_replace_callback('/{{#if\s+(\w+)}}(.*?){{\/if}}/s', function($matches) {
-            $varName = $matches[1];
-            $content = $matches[2];
-            return '{{#' . $varName . '}}' . $content . '{{/' . $varName . '}}';
-        }, $html);
+        // Handle {{#if var}} -> {{#var}}
+        $html = preg_replace('/{{#if\s+([\w\.]+)\s*}}/', '{{#$1}}', $html);
+        $html = str_replace('{{/if}}', '{{/}}', $html);
+
+        // Handle {{this}} -> {{.}}
+        $html = str_replace('{{this}}', '{{.}}', $html);
 
         // 2. MUSTACHE RENDER
         // Load Mustache v3+ with namespace
