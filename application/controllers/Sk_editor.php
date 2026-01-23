@@ -367,15 +367,33 @@ class Sk_editor extends CI_Controller {
         $data = $input_data ?: [];
         $data['globalSettings'] = $settings;
 
-        // 1. CONVERT HANDLEBARS SYNTAX TO MUSTACHE
-        // Handle {{#each var}} -> {{#var}}
-        $html = preg_replace('/{{#each\s+([\w\.]+)\s*}}/', '{{#$1}}', $html);
-        $html = str_replace('{{/each}}', '{{/}}', $html);
+        // 1. SYNTAX CONVERSION (Handlebars -> Mustache)
         
-        // Handle {{#if var}} -> {{#var}}
-        $html = preg_replace('/{{#if\s+([\w\.]+)\s*}}/', '{{#$1}}', $html);
-        $html = str_replace('{{/if}}', '{{/}}', $html);
+        // Handle {{#each}} recursively for nesting support
+        $pattern = '/{{#each\s+([\w\.]+)\s*}}((?:(?!{{#each).)*?){{\/each}}/s';
+        $limit = 100;
+        while (preg_match($pattern, $html) && $limit-- > 0) {
+            $html = preg_replace_callback($pattern, function($matches) {
+                $varName = $matches[1];
+                $content = $matches[2];
+                return '{{#' . $varName . '}}' . $content . '{{/' . $varName . '}}';
+            }, $html);
+        }
+        
+        // Handle {{#if}} recursively
+        $ifPattern = '/{{#if\s+([\w\.]+)\s*}}((?:(?!{{#if).)*?){{\/if}}/s';
+        $limit = 100;
+        while (preg_match($ifPattern, $html) && $limit-- > 0) {
+            $html = preg_replace_callback($ifPattern, function($matches) {
+                $varName = $matches[1];
+                $content = $matches[2];
+                return '{{#' . $varName . '}}' . $content . '{{/' . $varName . '}}';
+            }, $html);
+        }
 
+        // Cleanup any remaining tags (Fallback)
+        $html = str_replace(['{{/each}}', '{{/if}}'], '{{/}}', $html);
+        
         // Handle {{this}} -> {{.}}
         $html = str_replace('{{this}}', '{{.}}', $html);
 

@@ -104,20 +104,24 @@
                     <!-- Quick Start -->
                     <div class="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-6 border border-teal-100">
                         <h3 class="text-lg font-bold text-teal-700 mb-3 flex items-center gap-2">
-                            <i class="fas fa-rocket"></i> Quick Start
+                            <i class="fas fa-rocket"></i> Alur Kerja (Workflow)
                         </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div class="bg-white rounded-lg p-4 shadow-sm border border-teal-100">
                                 <div class="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 font-bold mb-2">1</div>
-                                <p class="text-sm text-slate-600">Ketik konten surat di <strong>editor visual</strong></p>
+                                <p class="text-sm text-slate-600">Desain Template & Variabel di sini.</p>
                             </div>
                             <div class="bg-white rounded-lg p-4 shadow-sm border border-teal-100">
                                 <div class="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 font-bold mb-2">2</div>
-                                <p class="text-sm text-slate-600">Seleksi teks yang ingin jadi <strong>variabel dinamis</strong>, klik "Make Variable"</p>
+                                <p class="text-sm text-slate-600">Buat SK baru, isi data, simpan sebagai <strong>Draft</strong>.</p>
                             </div>
                             <div class="bg-white rounded-lg p-4 shadow-sm border border-teal-100">
                                 <div class="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 font-bold mb-2">3</div>
-                                <p class="text-sm text-slate-600">Atau klik <strong>"+ Tambah Variabel"</strong> di sidebar untuk menambah variabel baru</p>
+                                <p class="text-sm text-slate-600">Review draft, edit jika perlu.</p>
+                            </div>
+                            <div class="bg-white rounded-lg p-4 shadow-sm border border-teal-100">
+                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold mb-2">4</div>
+                                <p class="text-sm text-slate-600">Klik <strong>Finalisasi</strong> untuk memberi Nomor Surat & mengunci arsip.</p>
                             </div>
                         </div>
                     </div>
