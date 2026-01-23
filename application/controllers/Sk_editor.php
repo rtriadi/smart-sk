@@ -6,40 +6,38 @@ class Sk_editor extends CI_Controller {
     public function __construct() {
         parent::__construct();
         
-        // Manual Autoloader for Dompdf to avoid PHPUnit ParseError
+        // Custom autoloader for Dompdf and dependencies (avoids PHPUnit compatibility issues)
         spl_autoload_register(function ($class) {
-            // Handle Dompdf namespace
-            if (strpos($class, 'Dompdf\\') === 0) {
-                // Check src directory first
-                $file = FCPATH . 'vendor/dompdf/dompdf/src/' . str_replace('\\', '/', substr($class, 7)) . '.php';
-                if (file_exists($file)) {
-                    require_once $file;
-                    return;
+            $namespaces = [
+                'Dompdf\\' => FCPATH . 'vendor/dompdf/dompdf/src/',
+                'FontLib\\' => FCPATH . 'vendor/phenx/php-font-lib/src/FontLib/',
+                'Sabr\\' => FCPATH . 'vendor/phenx/php-font-lib/src/Sabr/',
+                'Svg\\' => FCPATH . 'vendor/phenx/php-svg-lib/src/Svg/',
+                'Masterminds\\' => FCPATH . 'vendor/masterminds/html5/src/',
+            ];
+            
+            foreach ($namespaces as $prefix => $baseDir) {
+                $len = strlen($prefix);
+                if (strncmp($prefix, $class, $len) === 0) {
+                    $relativeClass = substr($class, $len);
+                    $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
+                    if (file_exists($file)) {
+                        require_once $file;
+                        return true;
+                    }
                 }
             }
-
-            // Handle specific legacy classes in lib
+            
+            // Handle Cpdf legacy class
             if ($class === 'Dompdf\Cpdf') {
                 $file = FCPATH . 'vendor/dompdf/dompdf/lib/Cpdf.php';
                 if (file_exists($file)) {
                     require_once $file;
-                    return;
+                    return true;
                 }
             }
             
-            // Also load dependencies if needed (HTML5Lib, FontLib, SvgLib)
-            if (strpos($class, 'FontLib\\') === 0) {
-                $file = FCPATH . 'vendor/phenx/php-font-lib/src/' . str_replace('\\', '/', $class) . '.php';
-                if (file_exists($file)) require_once $file;
-            }
-            if (strpos($class, 'SvgLib\\') === 0) {
-                $file = FCPATH . 'vendor/phenx/php-svg-lib/src/' . str_replace('\\', '/', $class) . '.php';
-                if (file_exists($file)) require_once $file;
-            }
-            if (strpos($class, 'Svg\\') === 0) {
-                $file = FCPATH . 'vendor/phenx/php-svg-lib/src/' . str_replace('\\', '/', $class) . '.php';
-                if (file_exists($file)) require_once $file;
-            }
+            return false;
         });
 
         check_not_login(); // Enforce Auth
@@ -53,7 +51,16 @@ class Sk_editor extends CI_Controller {
 
     public function api_get_templates() {
         $templates = $this->Template_model->get_all_templates();
-        echo json_encode($templates);
+        $result = [];
+        foreach ($templates as $t) {
+            $result[] = [
+                'id' => $t->id,
+                'name' => $t->nama_sk,
+                'kategori' => $t->kategori
+            ];
+        }
+        header('Content-Type: application/json');
+        echo json_encode($result);
     }
 
     public function index() {
@@ -160,9 +167,6 @@ class Sk_editor extends CI_Controller {
         
         // Check for oversized payload or empty post
         if (empty($input_data) && empty($settings_json)) {
-             $logMsg = date('Y-m-d H:i:s') . " - Empty payload. POST: " . print_r($_POST, true) . "\n";
-             @file_put_contents('debug_sk_save.txt', $logMsg, FILE_APPEND);
-             
              echo json_encode(['status' => 'error', 'message' => 'No data received. Payload might be too large (max post size exceeded).']);
              return;
         }
@@ -171,15 +175,11 @@ class Sk_editor extends CI_Controller {
         // Check for excessively large payload (likely uncompressed image) to prevent DB crash (max_allowed_packet is 1MB)
         if (strlen($input_data) > 950000) { // Limit to ~950KB to be safe below 1MB default
              $sizeMB = round(strlen($input_data) / 1048576, 2);
-             @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Payload too large: {$sizeMB}MB. Rejecting to prevent crash.\n", FILE_APPEND);
              echo json_encode(['status' => 'error', 'message' => "Data too large ({$sizeMB}MB). Server limit is 1MB. Please use a smaller logo or ask admin to increase 'max_allowed_packet'."]);
              return;
         }
-        
-        @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Payload received.\n", FILE_APPEND);
 
         if ($archive_id && $archive_id !== 'null') {
-            @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Updating ID: $archive_id\n", FILE_APPEND);
             // Update existing
             $update_data = [
                 'input_data_json' => $input_data,
@@ -188,15 +188,12 @@ class Sk_editor extends CI_Controller {
             ];
             $this->db->where('id', $archive_id);
             if ($this->db->update('tb_sk_archives', $update_data)) {
-                 @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Update Success\n", FILE_APPEND);
                 echo json_encode(['status' => 'success', 'id' => $archive_id]);
             } else {
                 $error = $this->db->error();
-                 @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Update Failed: " . $error['message'] . "\n", FILE_APPEND);
                 echo json_encode(['status' => 'error', 'message' => $error['message']]);
             }
         } else {
-             @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Creating New\n", FILE_APPEND);
             // Create new
             $no_surat = 'DRAFT-' . date('YmdHis');
             $user_id = $this->session->userdata('id_user') ? $this->session->userdata('id_user') : 0;
@@ -208,16 +205,12 @@ class Sk_editor extends CI_Controller {
                 'created_by' => $user_id,
                 'no_surat' => $no_surat
             ];
-            
-            @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Data prepared: " . print_r($save_data, true) . "\n", FILE_APPEND);
 
             if ($this->Archive_model->create_archive($save_data)) {
                  $new_id = $this->db->insert_id();
-                 @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Create Success ID: $new_id\n", FILE_APPEND);
                 echo json_encode(['status' => 'success', 'id' => $new_id]);
             } else {
                 $error = $this->db->error();
-                 @file_put_contents('debug_sk_save.txt', date('Y-m-d H:i:s') . " - Create Failed: " . $error['message'] . "\n", FILE_APPEND);
                 echo json_encode(['status' => 'error', 'message' => $error['message']]);
             }
         }
@@ -256,6 +249,48 @@ class Sk_editor extends CI_Controller {
         }
 
         $this->Archive_model->update_archive($id, ['no_surat' => $new_name]);
+        echo json_encode(['status' => 'success']);
+    }
+
+    public function finalize_draft() {
+        // AJAX Handler - Finalize a draft to become official SK
+        $id = $this->input->post('id');
+        $no_surat = $this->input->post('no_surat');
+        $status = $this->input->post('status');
+        
+        if (!$id || !$no_surat) {
+             echo json_encode(['status' => 'error', 'message' => 'Data tidak valid']);
+             return;
+        }
+
+        $update_data = [
+            'no_surat' => $no_surat,
+            'status' => $status ?: 'final',
+            'finalized_at' => date('Y-m-d H:i:s')
+        ];
+        
+        $this->Archive_model->update_archive($id, $update_data);
+        echo json_encode(['status' => 'success']);
+    }
+
+    public function update_status() {
+        // AJAX Handler - Update status (draft/final)
+        $id = $this->input->post('id');
+        $status = $this->input->post('status');
+        
+        if (!$id || !$status) {
+             echo json_encode(['status' => 'error', 'message' => 'Data tidak valid']);
+             return;
+        }
+
+        $update_data = ['status' => $status];
+        
+        // If reverting to draft, clear finalized_at
+        if ($status === 'draft') {
+            $update_data['finalized_at'] = null;
+        }
+        
+        $this->Archive_model->update_archive($id, $update_data);
         echo json_encode(['status' => 'success']);
     }
 
@@ -302,6 +337,23 @@ class Sk_editor extends CI_Controller {
         redirect('sk_editor/archives');
     }
 
+    // Debug endpoint - remove in production
+    public function debug_archive($archive_id) {
+        $archive = $this->Archive_model->get_archive_by_id($archive_id);
+        $template = $this->Template_model->get_template_by_id($archive->template_id);
+        
+        header('Content-Type: application/json');
+        echo json_encode([
+            'archive_id' => $archive_id,
+            'template_id' => $archive->template_id,
+            'no_surat' => $archive->no_surat,
+            'input_data' => json_decode($archive->input_data_json, true),
+            'settings' => json_decode($archive->settings_json, true),
+            'html_pattern_length' => strlen($template->html_pattern),
+            'html_pattern_preview' => substr($template->html_pattern, 0, 500)
+        ], JSON_PRETTY_PRINT);
+    }
+
     private function _prepare_sk_html($archive_id, $mode = 'pdf') {
         $archive = $this->Archive_model->get_archive_by_id($archive_id);
         if (!$archive) show_404();
@@ -312,47 +364,70 @@ class Sk_editor extends CI_Controller {
         $html = $template->html_pattern;
 
         // Merge Settings into Data
-        $data = $input_data;
+        $data = $input_data ?: [];
         $data['globalSettings'] = $settings;
 
-        // 1. LEGACY PRE-PROCESSING (Same as JS)
-        // {{#each var}} -> {{#var}}
-        $html = preg_replace('/{{#each\s+(.*?)}}/', '{{#$1}}', $html);
-        $html = str_replace('{{/each}}', '{{/}}', $html);
+        // 1. CONVERT HANDLEBARS SYNTAX TO MUSTACHE
+        // {{#each var}}...{{/each}} -> {{#var}}...{{/var}}
+        $html = preg_replace_callback('/{{#each\s+(\w+)}}(.*?){{\/each}}/s', function($matches) {
+            $varName = $matches[1];
+            $content = $matches[2];
+            return '{{#' . $varName . '}}' . $content . '{{/' . $varName . '}}';
+        }, $html);
         
-        // {{#if var}} -> {{#var}}
-        $html = preg_replace('/{{#if\s+(.*?)}}/', '{{#$1}}', $html);
-        $html = str_replace('{{/if}}', '{{/}}', $html);
+        // {{#if var}}...{{/if}} -> {{#var}}...{{/var}}
+        $html = preg_replace_callback('/{{#if\s+(\w+)}}(.*?){{\/if}}/s', function($matches) {
+            $varName = $matches[1];
+            $content = $matches[2];
+            return '{{#' . $varName . '}}' . $content . '{{/' . $varName . '}}';
+        }, $html);
 
         // 2. MUSTACHE RENDER
-        // Ensure Composer Autoload
-        if (file_exists(FCPATH . 'vendor/autoload.php')) {
-            require_once FCPATH . 'vendor/autoload.php';
-        }
+        // Load Mustache v3+ with namespace
+        $mustacheSrc = FCPATH . 'vendor/mustache/mustache/src/';
+        
+        // Register Mustache namespace autoloader
+        spl_autoload_register(function ($class) use ($mustacheSrc) {
+            if (strpos($class, 'Mustache\\') === 0) {
+                $relative = substr($class, 9);
+                $file = $mustacheSrc . str_replace('\\', '/', $relative) . '.php';
+                if (file_exists($file)) {
+                    require_once $file;
+                    return true;
+                }
+            }
+            return false;
+        });
 
         try {
-            $m = new Mustache_Engine([
+            $m = new \Mustache\Engine([
                 'entity_flags' => ENT_QUOTES,
                 'escape' => function($value) {
-                    // Custom escape: Convert newlines to <br> BEFORE htmlspecialchars
-                    // BUT Mustache runs escape on the raw string. 
-                    // Better strategy: pre-process data like JS did.
                     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
                 }
             ]);
 
             // PRE-PROCESS DATA (Newlines -> <br>)
-            array_walk_recursive($data, function(&$item) {
-                if (is_string($item)) {
-                     $item = nl2br($item);
-                }
-            });
+            if (is_array($data)) {
+                array_walk_recursive($data, function(&$item) {
+                    if (is_string($item)) {
+                         $item = nl2br($item);
+                    }
+                });
+            }
 
-            $html = $m->render($html, $data);
+            $html = $m->render($html, $data ?: []);
 
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
+            error_log('Smart-SK Mustache Error: ' . $e->getMessage());
             $html .= "<br><b>Render Error: " . $e->getMessage() . "</b>";
-        }    
+        } catch (\Error $e) {
+            error_log('Smart-SK Mustache Fatal Error: ' . $e->getMessage());
+            $html .= "<br><b>Fatal Error: " . $e->getMessage() . "</b>";
+        }
+
+        // 3. Convert pagebreak comments to visible elements
+        $html = str_replace('<!-- pagebreak -->', '<div class="mce-pagebreak"></div>', $html);
 
         // 4. CSS Injection (Logic remains same, just after render)
         if ($settings) {
@@ -436,7 +511,23 @@ class Sk_editor extends CI_Controller {
                         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
                         box-sizing: border-box; 
                     }
+                    /* Page break handling */
+                    .mce-pagebreak {
+                        display: block;
+                        height: 2px;
+                        border: 0;
+                        border-top: 2px dashed #0d9488;
+                        margin: 1em 0;
+                        page-break-after: always;
+                    }
                     @media print {
+                        @page {
+                            size: {$width} auto;
+                            margin-top: {$marginTop};
+                            margin-bottom: {$marginBottom};
+                            margin-left: {$marginLeft};
+                            margin-right: {$marginRight};
+                        }
                         body {
                             background: white;
                             padding: 0;
@@ -444,9 +535,17 @@ class Sk_editor extends CI_Controller {
                         }
                         .page-container {
                             width: 100%;
+                            min-height: auto;
                             box-shadow: none;
                             padding: 0;
                             margin: 0;
+                        }
+                        .mce-pagebreak {
+                            display: block;
+                            height: 0;
+                            border: none;
+                            margin: 0;
+                            page-break-after: always;
                         }
                     }
                 ";

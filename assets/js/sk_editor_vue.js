@@ -1,93 +1,113 @@
 const { createApp, ref, reactive, computed, onMounted, watch } = Vue;
 
+// HTML escape helper to prevent XSS
+const escapeHtml = (str) => {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+};
+
 createApp({
     setup() {
         // --- State ---
-        const config = ref(TEMPLATE_CONFIG);
-        // Filter out legacy 'jabatan_selector' from dynamic form if it exists, 
-        // as we now use the dedicated "Penandatangan" sidebar section.
-        if (config.value && Array.isArray(config.value)) {
-            // FORCE HIDE Signatory Derived Fields (User Request)
-            config.value.forEach((section, index) => {
-                if (section.fields) {
-                    section.fields.forEach(field => {
-                        // Hide all position-related fields and any field with "jabatan" in variable name or label
-                        if (['jabatan_penandatangan', 'nama_penandatangan', 'nip_penandatangan', 'jabatan_penandatangan_select', 'jabatan_selector'].includes(field.variable) ||
-                            field.type === 'select_jabatan' ||
-                            field.type === 'select_pejabat' ||
-                            (field.variable && field.variable.includes('jabatan')) ||
-                            (field.label && field.label.toLowerCase().includes('pilih jabatan'))) {
-                            field.type = 'hidden';
-                        }
-                        // removed Force Readonly Display for Selector block
-                    });
-                }
-
-                // Inject "Sembunyikan NIP" Checkbox into Section 3 (Index 2)
-                if (index === 2 && section.fields) {
-                    // Check if not already added
-                    if (!section.fields.find(f => f.variable === 'hide_nip')) {
-                        section.fields.push({
-                            type: 'checkbox',
-                            variable: 'hide_nip',
-                            label: 'Sembunyikan NIP'
-                        });
-                    }
-                }
-            });
-        }
+        const rawConfig = ref(TEMPLATE_CONFIG);
         const templateHtml = ref(TEMPLATE_HTML);
         const templateId = ref(TEMPLATE_ID);
         const siteUrl = ref(SITE_URL);
         const archiveId = ref(ARCHIVE_ID);
 
+        // Parse config - handle LEGACY (title/section-based) and NEW (flat) formats
+        const templateVariables = computed(() => {
+            if (!rawConfig.value || !Array.isArray(rawConfig.value)) return [];
+            
+            // Check if it's the LEGACY section-based format (using 'title' or 'section' key)
+            if (rawConfig.value.length > 0 && (rawConfig.value[0].title || rawConfig.value[0].section) && rawConfig.value[0].fields) {
+                // LEGACY FORMAT: Extract all fields from all sections
+                const allFields = [];
+                rawConfig.value.forEach(section => {
+                    if (section.fields && Array.isArray(section.fields)) {
+                        section.fields.forEach(field => {
+                            if (field.variable && field.variable !== '_global_settings') {
+                                allFields.push({
+                                    variable: field.variable,
+                                    label: field.label || field.variable,
+                                    type: field.type || 'text'
+                                });
+                            }
+                        });
+                    }
+                });
+                return allFields;
+            }
+            
+            // NEW FORMAT: Flat array of variables from Template Builder
+            return rawConfig.value.filter(item => 
+                item.variable && 
+                item.variable !== '_global_settings' && 
+                item.type !== 'settings'
+            ).map(item => ({
+                variable: item.variable,
+                label: item.label || item.variable,
+                type: item.type || 'text'
+            }));
+        });
+
+        // Extract layout settings from config
+        const templateLayout = computed(() => {
+            if (!rawConfig.value || !Array.isArray(rawConfig.value)) return null;
+            const settingsItem = rawConfig.value.find(item => item.variable === '_global_settings');
+            return settingsItem?.layout || null;
+        });
+
         // Form Data (Reactive)
         const formData = reactive({});
         const pejabatList = ref(typeof PEJABAT_DATA !== 'undefined' ? PEJABAT_DATA : []);
 
-        // Global Settings (Reactive & Persistent)
+        // Mandatory Settings (Always present)
+        const mandatorySettings = reactive({
+            jumlah_salinan: 5,
+            tampilkan_hijriah: true,
+            tampilkan_nip: true,
+            nomor_urut: 1
+        });
+
+        // Global Settings (Layout/Typography - Reactive & Persistent)
         const globalSettings = reactive({
-            paperSize: 'A4', // A4, F4, Legal
-            orientation: 'portrait', // portrait, landscape
+            paperSize: 'A4',
+            orientation: 'portrait',
             marginTop: 20,
             marginBottom: 20,
-            marginLeft: 25,
+            marginLeft: 20,
             marginRight: 20,
-            showKop: true,
-            // Typography
             fontSize: '12pt',
             lineHeight: '1.5',
-            // Kop Surat Fields
-            // Kop Surat Fields
-            kopLogo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Logo_of_the_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg/1200px-Logo_of_the_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg.png',
-            kopTitle1: 'MAHKAMAH AGUNG REPUBLIK INDONESIA',
-            kopTitle2: 'DIREKTORAT JENDERAL BADAN PERADILAN AGAMA',
-            kopTitle3: 'PENGADILAN TINGGI AGAMA GORONTALO',
-            kopTitle4: 'PENGADILAN AGAMA GORONTALO',
-            kopAddress: 'Jalan Achmad Nadjamuddin No.22, Dulalowo Timur, Kecamatan Kota Tengah\nKota Gorontalo, 96138. www.pa-gorontalo.go.id, surat@pa-gorontalo.go.id',
-            kopLogoWidth: 100, // Default width in px
-            showPageNumbers: false, // Page Numbering Toggle
+            showPageNumbers: false,
             defaultSkLogo: ''
         });
 
         // Theme Logic
         const isDarkMode = ref(localStorage.getItem('sk_editor_theme') === 'dark');
 
-        // UI State (New)
-        const isSidebarOpen = ref(false); // Mobile sidebar state
-        const activeSections = ref([0]); // Accordion state (default first open)
+        // UI State
+        const isSidebarOpen = ref(false);
+        const activeTab = ref('form');
+        const isDataSectionOpen = ref(true);
+        const isMandatorySectionOpen = ref(true);
 
         const toggleSidebar = () => {
             isSidebarOpen.value = !isSidebarOpen.value;
         };
 
-        const toggleSection = (index) => {
-            const i = activeSections.value.indexOf(index);
-            if (i > -1) {
-                activeSections.value.splice(i, 1); // Close
-            } else {
-                activeSections.value.push(index); // Open
-            }
+        const toggleDataSection = () => {
+            isDataSectionOpen.value = !isDataSectionOpen.value;
+        };
+
+        const toggleMandatorySection = () => {
+            isMandatorySectionOpen.value = !isMandatorySectionOpen.value;
         };
 
         // Zoom Logic
@@ -109,17 +129,12 @@ createApp({
             zoomScale.value = 1.0;
         };
 
-        // selectedPejabatId removed - no longer needed for auto-population
-
         // Helper to set pejabat (auto-population)
         const setPejabat = (id) => {
-            // No longer need to sync dropdown - auto-population only
             const p = pejabatList.value.find(x => x.id == id);
             if (p) {
-                // Determine full title
                 let jabatanFull = p.jabatan;
 
-                // Map short names to long names (Legacy Support / Consistency)
                 const titles = {
                     'Ketua': 'KETUA PENGADILAN AGAMA GORONTALO',
                     'Wakil Ketua': 'WAKIL KETUA PENGADILAN AGAMA GORONTALO',
@@ -127,42 +142,30 @@ createApp({
                     'Sekretaris': 'SEKRETARIS PENGADILAN AGAMA GORONTALO'
                 };
 
-                // Flexible Match (Case insensitive check if direct match fails)
                 const safeJabatan = p.jabatan ? p.jabatan.trim() : '';
 
                 if (titles[safeJabatan]) {
                     jabatanFull = titles[safeJabatan];
                 } else {
-                    // Try finding key case-insensitive
                     const key = Object.keys(titles).find(k => k.toLowerCase() === safeJabatan.toLowerCase());
                     if (key) {
                         jabatanFull = titles[key];
                     } else {
-                        // Fallback: Use raw or uppercase
                         jabatanFull = safeJabatan.toUpperCase();
                     }
                 }
 
-                // Force Update
                 formData.nama_penandatangan = p.nama;
                 formData.nip_penandatangan = p.nip;
                 formData.jabatan_penandatangan = jabatanFull;
-                // Sync the "Selector" variable for the readonly display
-                if (formData.hasOwnProperty('jabatan_penandatangan_select')) {
-                    formData.jabatan_penandatangan_select = p.jabatan;
-                } else {
-                    // If flexible, just set it anyway
-                    formData['jabatan_penandatangan_select'] = p.jabatan;
-                }
-
-                console.log("Pejabat Set:", p.nama, jabatanFull);
+                formData['jabatan_penandatangan_select'] = p.jabatan;
             }
         };
 
         const saveAsDefault = () => {
             try {
-                // Save current globalSettings to localStorage
                 localStorage.setItem('sk_editor_settings', JSON.stringify(globalSettings));
+                localStorage.setItem('sk_editor_mandatory', JSON.stringify(mandatorySettings));
                 toastr.success('Settings saved as your default for new documents.', 'Defaults Saved');
             } catch (e) {
                 console.error('Failed to save defaults:', e);
@@ -171,7 +174,7 @@ createApp({
         };
 
         const initializeSettings = () => {
-            // 1. Always attempt to load from LocalStorage first (User Defaults)
+            // 1. Load from LocalStorage first (User Defaults)
             const savedSettings = localStorage.getItem('sk_editor_settings');
             if (savedSettings) {
                 try {
@@ -180,9 +183,35 @@ createApp({
                 } catch (e) { console.error('Settings parse error:', e); }
             }
 
-            // 2. If Draft Settings exist (Edit Mode), override
+            // Load mandatory settings defaults
+            const savedMandatory = localStorage.getItem('sk_editor_mandatory');
+            if (savedMandatory) {
+                try {
+                    const parsed = JSON.parse(savedMandatory);
+                    Object.assign(mandatorySettings, parsed);
+                } catch (e) { console.error('Mandatory settings parse error:', e); }
+            }
+
+            // 2. If Template has layout settings, apply them
+            if (templateLayout.value) {
+                const tl = templateLayout.value;
+                if (tl.paperSize) globalSettings.paperSize = tl.paperSize;
+                if (tl.orientation) globalSettings.orientation = tl.orientation;
+                if (tl.margins) {
+                    if (tl.margins.top !== undefined) globalSettings.marginTop = tl.margins.top;
+                    if (tl.margins.bottom !== undefined) globalSettings.marginBottom = tl.margins.bottom;
+                    if (tl.margins.left !== undefined) globalSettings.marginLeft = tl.margins.left;
+                    if (tl.margins.right !== undefined) globalSettings.marginRight = tl.margins.right;
+                }
+            }
+
+            // 3. If Draft Settings exist (Edit Mode), override
             if (DRAFT_SETTINGS && typeof DRAFT_SETTINGS === 'object' && Object.keys(DRAFT_SETTINGS).length > 0) {
                 Object.assign(globalSettings, DRAFT_SETTINGS);
+                // Load mandatory from draft if exists
+                if (DRAFT_SETTINGS.mandatorySettings) {
+                    Object.assign(mandatorySettings, DRAFT_SETTINGS.mandatorySettings);
+                }
             }
 
             // Apply Default SK Content Logo (if New Draft and global setting exists)
@@ -201,42 +230,33 @@ createApp({
                 document.documentElement.classList.remove('dark');
             }
 
-            // Initialize formData
-            // Initialize formData
-            if (config.value && Array.isArray(config.value)) {
-                config.value.forEach(section => {
-                    if (section && section.fields && Array.isArray(section.fields)) {
-                        section.fields.forEach(field => {
-                            if (field.type === 'repeater') {
-                                formData[field.variable] = [];
-                            } else if (field.variable === 'no_sk' && typeof TEMPLATE_PATTERN !== 'undefined' && TEMPLATE_PATTERN) {
-                                // Prefer the database pattern for the letter number
-                                formData[field.variable] = TEMPLATE_PATTERN;
-                            } else {
-                                formData[field.variable] = field.default || '';
-                            }
-                        });
-                    }
-                });
-            }
+            // Initialize formData from template variables
+            templateVariables.value.forEach(field => {
+                if (field.type === 'repeater') {
+                    formData[field.variable] = [];
+                } else if (field.variable === 'no_sk' && typeof TEMPLATE_PATTERN !== 'undefined' && TEMPLATE_PATTERN) {
+                    formData[field.variable] = TEMPLATE_PATTERN;
+                } else {
+                    formData[field.variable] = '';
+                }
+            });
 
             // Initialize Attachments if not present
             if (!formData.attachments) {
                 formData.attachments = [];
             }
 
-            // Then overwrite with saved draft data if it exists
+            // Overwrite with saved draft data if it exists
             if (DRAFT_DATA) {
-                // Only overwrite fields that exist in DRAFT_DATA
-                // This preserves new fields that might not be in the draft
                 Object.assign(formData, DRAFT_DATA);
-
-                // EDIT MODE: Position data already loaded from draft, no need to sync dropdown
+                // Load mandatory settings from draft
+                if (DRAFT_DATA.mandatorySettings) {
+                    Object.assign(mandatorySettings, DRAFT_DATA.mandatorySettings);
+                }
             } else {
-                // NEW DRAFT: Attempt to set Default Pejabat (Active & Default=1)
+                // NEW DRAFT: Attempt to set Default Pejabat
                 const defaultPejabat = pejabatList.value.find(p => p.is_default == 1);
                 if (defaultPejabat) {
-                    // Auto-populate with default position
                     setPejabat(defaultPejabat.id);
                 }
             }
@@ -245,39 +265,51 @@ createApp({
             initializeSettings();
         });
 
-        // Watch Global Settings for Persistence - REMOVED
-        // This was causing Draft-specific settings to overwrite User Defaults (LocalStorage)
-        // Replaced by saveAsDefault() manual action.
-
         // --- Watchers for Smart Logic ---
-        // Position selection methods removed - using auto-population only
-
-        // 2. Date Logic (Indo + Hijri)
+        // Date Logic (Indo + Hijri)
         watch(() => formData.tanggal_sk, (newVal) => {
             if (newVal) {
                 const date = new Date(newVal);
 
-                // Indo Date
                 const indoFormatter = new Intl.DateTimeFormat('id-ID', {
                     day: 'numeric', month: 'long', year: 'numeric'
                 });
                 formData.tanggal_indo = indoFormatter.format(date);
 
-                // Hijri Date
-                const hijriFormatter = new Intl.DateTimeFormat('id-ID-u-ca-islamic', {
-                    day: 'numeric', month: 'long', year: 'numeric'
-                });
-                // Remove "AH" suffix if present and cleanup
-                let hijri = hijriFormatter.format(date);
-                hijri = hijri.replace(' AH', ' H');
-                formData.tanggal_hijri = hijri;
+                // Only set hijri if toggle is on
+                if (mandatorySettings.tampilkan_hijriah) {
+                    const hijriFormatter = new Intl.DateTimeFormat('id-ID-u-ca-islamic', {
+                        day: 'numeric', month: 'long', year: 'numeric'
+                    });
+                    let hijri = hijriFormatter.format(date);
+                    hijri = hijri.replace(' AH', ' H');
+                    formData.tanggal_hijri = hijri;
+                } else {
+                    formData.tanggal_hijri = '';
+                }
             } else {
                 formData.tanggal_indo = '';
                 formData.tanggal_hijri = '';
             }
         }, { immediate: true });
 
-        // 3. Logo Tengah Width Synchronization
+        // Watch for hijriah toggle changes
+        watch(() => mandatorySettings.tampilkan_hijriah, (newVal) => {
+            if (!newVal) {
+                formData.tanggal_hijri = '';
+            } else if (formData.tanggal_sk) {
+                // Recalculate hijri date when toggle is turned on
+                const date = new Date(formData.tanggal_sk);
+                const hijriFormatter = new Intl.DateTimeFormat('id-ID-u-ca-islamic', {
+                    day: 'numeric', month: 'long', year: 'numeric'
+                });
+                let hijri = hijriFormatter.format(date);
+                hijri = hijri.replace(' AH', ' H');
+                formData.tanggal_hijri = hijri;
+            }
+        });
+
+        // Logo Tengah Width Synchronization
         watch(() => formData.logo_tengah_width, (newVal) => {
             if (newVal && formData.skContentLogoWidth !== newVal) {
                 formData.skContentLogoWidth = newVal;
@@ -294,25 +326,7 @@ createApp({
         const previewHtml = computed(() => {
             let html = templateHtml.value;
 
-            // 0. PRE-PROCESS: Inject Logo Width & Custom Logo Override (Kop Logo)
-            // Use formData.skLogo if exists (Local Draft), else globalSettings.kopLogo (Default)
-            const activeLogo = formData.skLogo || globalSettings.kopLogo;
-            const activeWidth = formData.skLogoWidth || globalSettings.kopLogoWidth;
-
-            if (activeLogo) {
-                const widthStyle = activeWidth ? `width: ${activeWidth}px` : '';
-                const logoPlaceholder = activeLogo; // Use the actual base64/url
-
-                // Regex to find an img tag containing the global placeholder
-                const imgPlaceholderRegex = /<img([^>]*?)src=["']\{\{globalSettings\.kopLogo\}\}["']([^>]*?)>/gi;
-
-                html = html.replace(imgPlaceholderRegex, (match, pre, post) => {
-                    // Inject style and replace src
-                    return `<img${pre}src="${logoPlaceholder}" style="${widthStyle}"${post}>`;
-                });
-            }
-
-            // 0b. INJECT SK CONTENT LOGO (Garuda/etc) - Top Center of Body (DOM Based)
+            // Inject SK Content Logo
             if (formData.skContentLogo) {
                 try {
                     const parser = new DOMParser();
@@ -330,13 +344,12 @@ createApp({
 
                     const img = doc.createElement('img');
                     img.src = formData.skContentLogo;
-                    img.style.width = `${width}px`;
+                    img.style.width = width + 'px';
                     img.style.height = 'auto';
                     img.style.display = 'inline-block';
 
                     logoDiv.appendChild(img);
 
-                    // FORCE TOP: Insert as the very first element of the body
                     if (doc.body.firstChild) {
                         doc.body.insertBefore(logoDiv, doc.body.firstChild);
                     } else {
@@ -346,91 +359,84 @@ createApp({
                     html = doc.body.innerHTML;
                 } catch (e) {
                     console.error("Auto-inject logo failed:", e);
-                    const logoHtml = `<div style="text-align: center; width: 100%; margin: 0 0 15px 0;"><img src="${formData.skContentLogo}" style="width: ${formData.skContentLogoWidth || 100}px;"></div>`;
+                    const logoHtml = '<div style="text-align: center; width: 100%; margin: 0 0 15px 0;"><img src="' + formData.skContentLogo + '" style="width: ' + (formData.skContentLogoWidth || 100) + 'px;"></div>';
                     html = logoHtml + html;
                 }
             }
 
-            // 1. Simple Replacements (FormData)
+            // Simple Replacements (FormData)
             for (const [key, value] of Object.entries(formData)) {
                 if (Array.isArray(value)) continue;
 
-                // Special Handling: Hide NIP
-                if (key === 'nip_penandatangan' && formData.hide_nip) {
-                    // Replace NIP variable with empty string
-                    const regex = new RegExp(`{{${key}}}`, 'g');
+                // Handle hide NIP based on mandatory settings
+                if (key === 'nip_penandatangan' && !mandatorySettings.tampilkan_nip) {
+                    const regex = new RegExp('{{' + key + '}}', 'g');
                     html = html.replace(regex, '');
-
-                    // Also try to remove standard NIP labels if they exist right before it
-                    // Case 1: "NIP. {{nip_penandatangan}}"
-                    html = html.replace(/NIP\.\s*$/gm, ''); // This is risky regex, better handled below
-                    html = html.replace(/NIP\.\s*<br>/g, '<br>'); // Cleanup empty NIP label lines
-                    html = html.replace(/NIP\./g, (match, offset, string) => {
-                        // Check if followed by empty space (where nip variable was)
-                        // This is tricky without dom parsing. 
-                        // Simplest: Just replace the variable. If label remains, user sees "NIP. "
-                        return match;
-                    });
-
-                    // Specific fix for "NIP. " leaving a dangling label
-                    // We'll replace "NIP. " with "" if it's followed by nothing or a break
-                    // But since we just replaced the variable with '', we look for "NIP. "
-                    // Let's rely on visual check or more aggressive replacement if needed.
-                    // Ideally we replace "NIP. {{nip_penandatangan}}" as a block if possible?
-                    // But {{nip_penandatangan}} is already replaced by loop start. 
-
                     continue;
                 }
 
-                const regex = new RegExp(`{{${key}}}`, 'g');
-                const formattedValue = String(value).replace(/\n/g, '<br>');
+                // Handle hide Hijri date based on mandatory settings
+                if (key === 'tanggal_hijri' && !mandatorySettings.tampilkan_hijriah) {
+                    const regex = new RegExp('{{' + key + '}}', 'g');
+                    html = html.replace(regex, '');
+                    continue;
+                }
+
+                const regex = new RegExp('{{' + key + '}}', 'g');
+                const formattedValue = escapeHtml(value).replace(/\n/g, '<br>');
                 html = html.replace(regex, formattedValue);
             }
 
-            // Clean up dangling "NIP. " if hide_nip is on
-            if (formData.hide_nip) {
-                html = html.replace(/NIP\.\s*(?=<)/g, ''); // Remove "NIP. " if followed by tag (like <br>)
-                html = html.replace(/NIP\.\s*$/gm, '');   // Remove "NIP. " at end of lines
+            // Clean up dangling "NIP. " if tampilkan_nip is off
+            if (!mandatorySettings.tampilkan_nip) {
+                html = html.replace(/NIP\.\s*(?=<)/g, '');
+                html = html.replace(/NIP\.\s*$/gm, '');
             }
 
-            // 1b. Global Settings Replacements
+            // Handle Hijri date visibility
+            if (!mandatorySettings.tampilkan_hijriah) {
+                html = html.replace(/{{tanggal_hijri}}/g, '');
+                // Also remove common Hijri wrappers
+                html = html.replace(/\s*\/\s*{{tanggal_hijri}}/g, '');
+                html = html.replace(/\({{tanggal_hijri}}\)/g, '');
+            }
+
+            // Replace mandatory settings variables
+            html = html.replace(/{{jumlah_salinan}}/g, mandatorySettings.jumlah_salinan);
+            html = html.replace(/{{nomor_urut}}/g, mandatorySettings.nomor_urut);
+
+            // Global Settings Replacements
             for (const [key, value] of Object.entries(globalSettings)) {
-                const regex = new RegExp(`{{globalSettings.${key}}}`, 'g');
+                const regex = new RegExp('{{globalSettings.' + key + '}}', 'g');
                 html = html.replace(regex, value);
             }
 
-            // 2. Repeater Logic
-            if (config.value && Array.isArray(config.value)) {
-                config.value.forEach(section => {
-                    if (section && section.fields && Array.isArray(section.fields)) {
-                        section.fields.forEach(field => {
-                            if (field.type === 'repeater') {
-                                const items = formData[field.variable] || [];
-                                const loopRegex = new RegExp(`{{#each ${field.variable}}}([\\s\\S]*?){{/each}}`, 'g');
+            // Repeater Logic
+            templateVariables.value.forEach(field => {
+                if (field.type === 'repeater') {
+                    const items = formData[field.variable] || [];
+                    const loopRegex = new RegExp('{{#each ' + field.variable + '}}([\\s\\S]*?){{/each}}', 'g');
 
-                                html = html.replace(loopRegex, (match, content) => {
-                                    return items.map(item => {
-                                        const formattedItem = String(item).replace(/\n/g, '<br>');
-                                        return content.replace(/{{this}}/g, formattedItem);
-                                    }).join('');
-                                });
-                            }
-                        });
-                    }
-                });
-            }
+                    html = html.replace(loopRegex, (match, content) => {
+                        return items.map(item => {
+                            const formattedItem = escapeHtml(item).replace(/\n/g, '<br>');
+                            return content.replace(/{{this}}/g, formattedItem);
+                        }).join('');
+                    });
+                }
+            });
 
-            // 3. Conditional Logic
+            // Conditional Logic
             const ifRegex = /{{#if\s+(.*?)}}([\s\S]*?){{\/if}}/g;
             html = html.replace(ifRegex, (match, variable, content) => {
                 if (formData[variable]) return content;
                 if (globalSettings[variable]) return content;
+                if (mandatorySettings[variable]) return content;
                 return '';
             });
 
-            // 4. INJECT ATTACHMENTS (LAMPIRAN)
+            // Inject Attachments
             if (formData.attachments && formData.attachments.length > 0) {
-                // Roman Numeral Helper
                 const toRoman = (num) => {
                     const lookup = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
                     let roman = '';
@@ -455,32 +461,7 @@ createApp({
                         lampiranLabel += ' ' + toRoman(index + 1);
                     }
 
-                    const lampiranHtml = `
-                        <div class="smart-attachment-break" data-title="${att.title || 'Lampiran'}"></div>
-                        <div class="attachment-header" style="float: right; text-align: left; width: 75%; margin-bottom: 20px; font-size: 10pt; line-height: 1.2;">
-                            <table>
-                                <tr>
-                                    <td style="vertical-align: top; white-space: nowrap; width: 1%;">${lampiranLabel}</td>
-                                    <td style="vertical-align: top; width: 1%; padding: 0 5px;">:</td>
-                                    <td style="vertical-align: top;">KEPUTUSAN ${pejabatJabatan}<br>TENTANG ${(formData.judul_sk || formData.tentang || '').toUpperCase()}</td>
-                                </tr>
-                                <tr>
-                                    <td style="vertical-align: top;">NOMOR</td>
-                                    <td style="vertical-align: top;">:</td>
-                                    <td>${noSK}</td>
-                                </tr>
-                                <tr>
-                                    <td style="vertical-align: top;">TANGGAL</td>
-                                    <td style="vertical-align: top;">:</td>
-                                    <td>${tanggalIndo}</td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div style="clear: both;"></div>
-                        <div class="attachment-content">
-                            ${(att.content || '')}
-                        </div>
-                    `;
+                    const lampiranHtml = '\n                        <div class="smart-attachment-break" data-title="' + (att.title || 'Lampiran') + '"></div>\n                        <div class="attachment-header" style="float: right; text-align: left; width: 75%; margin-bottom: 20px; font-size: 10pt; line-height: 1.2;">\n                            <table>\n                                <tr>\n                                    <td style="vertical-align: top; white-space: nowrap; width: 1%;">' + lampiranLabel + '</td>\n                                    <td style="vertical-align: top; width: 1%; padding: 0 5px;">:</td>\n                                    <td style="vertical-align: top;">KEPUTUSAN ' + pejabatJabatan + '<br>TENTANG ' + (formData.judul_sk || formData.tentang || '').toUpperCase() + '</td>\n                                </tr>\n                                <tr>\n                                    <td style="vertical-align: top;">NOMOR</td>\n                                    <td style="vertical-align: top;">:</td>\n                                    <td>' + noSK + '</td>\n                                </tr>\n                                <tr>\n                                    <td style="vertical-align: top;">TANGGAL</td>\n                                    <td style="vertical-align: top;">:</td>\n                                    <td>' + tanggalIndo + '</td>\n                                </tr>\n                            </table>\n                        </div>\n                        <div style="clear: both;"></div>\n                        <div class="attachment-content">\n                            ' + (att.content || '') + '\n                        </div>\n                    ';
                     html += lampiranHtml;
                 });
             }
@@ -494,10 +475,26 @@ createApp({
             return { width, minHeight, padding: '0' };
         });
 
+        // Field type helper
+        const getFieldInputType = (type) => {
+            const typeMap = {
+                'text': 'textarea',
+                'textarea': 'textarea',
+                'number': 'number',
+                'date': 'date',
+                'select': 'select',
+                'checkbox': 'checkbox',
+                'image': 'image',
+                'repeater': 'repeater'
+            };
+            return typeMap[type] || 'textarea';
+        };
+
         const addRepeaterItem = (variable) => {
             if (!formData[variable]) formData[variable] = [];
             formData[variable].push('');
         };
+
         const removeRepeaterItem = (variable, index) => {
             if (formData[variable]) formData[variable].splice(index, 1);
         };
@@ -506,17 +503,15 @@ createApp({
             if (!formData.attachments) formData.attachments = [];
             formData.attachments.push({ title: 'Lampiran ...', content: '' });
 
-            // Initialize TinyMCE for the new item
             const index = formData.attachments.length - 1;
-            const id = `attachment-editor-${index}`;
+            const id = 'attachment-editor-' + index;
             Vue.nextTick(() => {
                 initTinyMCE(id, index);
             });
         };
 
         const removeAttachment = (index) => {
-            // Destroy TinyMCE instance first
-            const id = `attachment-editor-${index}`;
+            const id = 'attachment-editor-' + index;
             if (typeof tinymce !== 'undefined' && tinymce.get(id)) {
                 tinymce.get(id).remove();
             }
@@ -529,12 +524,11 @@ createApp({
                 return;
             }
 
-            // Allow time for DOM to render
             setTimeout(() => {
                 const isDark = document.documentElement.classList.contains('dark');
 
                 tinymce.init({
-                    selector: `#${id}`,
+                    selector: '#' + id,
                     menubar: false,
                     statusbar: false,
                     height: 500,
@@ -544,14 +538,12 @@ createApp({
                     toolbar: 'undo redo | bold italic | alignleft aligncenter alignright | bullist numlist | table',
                     content_style: "@font-face { font-family: 'Bookman Old Style'; src: url('" + siteUrl.value + "assets/BOOKOS.TTF') format('truetype'); font-weight: normal; } @font-face { font-family: 'Bookman Old Style'; src: url('" + siteUrl.value + "assets/BOOKOSB.TTF') format('truetype'); font-weight: bold; } body { font-family: 'Bookman Old Style', serif; font-size:12pt; } table { width: 100% !important; border-collapse: collapse; } td, th { border: 1px solid #000; padding: 4px; vertical-align: top; }",
                     setup: (editor) => {
-                        // Set initial value
                         editor.on('init', () => {
                             if (formData.attachments[index] && formData.attachments[index].content) {
                                 editor.setContent(formData.attachments[index].content);
                             }
                         });
 
-                        // Sync data on change
                         editor.on('Change Keyup', () => {
                             if (formData.attachments[index]) {
                                 formData.attachments[index].content = editor.getContent();
@@ -589,7 +581,6 @@ createApp({
                     canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // Try WebP first for best compression with transparency support
                     let dataUrl = canvas.toDataURL('image/webp', quality);
 
                     if (dataUrl.length > 500000) {
@@ -610,27 +601,11 @@ createApp({
         const handleGenericImageUpload = (event, variable, widthVariable, defaultWidth) => {
             const file = event.target.files[0];
             if (file) {
-                // Compress to 300x300, 0.7 quality
                 compressImage(file, 300, 300, 0.7, (dataUrl) => {
                     formData[variable] = dataUrl;
                     if (!formData[widthVariable]) {
                         formData[widthVariable] = defaultWidth || 70;
                     }
-                    // Reset input
-                    event.target.value = '';
-                });
-            }
-        };
-
-        const handleLogoUpload = (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                // Compress to 300x300, 0.7 quality
-                compressImage(file, 300, 300, 0.7, (dataUrl) => {
-                    formData.skLogo = dataUrl;
-                    if (!formData.skLogoWidth) formData.skLogoWidth = globalSettings.kopLogoWidth || 100;
-
-                    // Reset input
                     event.target.value = '';
                 });
             }
@@ -639,22 +614,17 @@ createApp({
         const handleContentLogoUpload = (event) => {
             const file = event.target.files[0];
             if (file) {
-                // Compress to 300x300, 0.7 quality
                 compressImage(file, 300, 300, 0.7, (dataUrl) => {
-                    // Set both variables for compatibility
                     formData.skContentLogo = dataUrl;
                     formData.logo_tengah = dataUrl;
 
-                    // Set width for both variables
                     if (!formData.skContentLogoWidth) formData.skContentLogoWidth = 100;
                     if (!formData.logo_tengah_width) formData.logo_tengah_width = 100;
 
-                    // Reset input
                     event.target.value = '';
                 });
             }
         };
-
 
         const recompressBase64 = (base64, maxWidth, maxHeight, quality) => {
             return new Promise((resolve) => {
@@ -680,27 +650,15 @@ createApp({
                     canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // Force WebP
                     const newDataUrl = canvas.toDataURL('image/webp', quality);
                     resolve(newDataUrl);
                 };
-                img.onerror = () => resolve(base64); // Return original on error
+                img.onerror = () => resolve(base64);
                 img.src = base64;
             });
         };
 
         const sanitizeGlobalSettings = async () => {
-            // 1. Check Kop Logo (Threshold: 500KB)
-            if (globalSettings.kopLogo && globalSettings.kopLogo.length > 500000) {
-                // It's too big, recompress!
-                toastr.info("Optimizing Global Logo...", { timeOut: 2000 });
-                globalSettings.kopLogo = await recompressBase64(globalSettings.kopLogo, 800, 400, 0.7);
-
-                // Update LocalStorage too to fix it for future
-                localStorage.setItem('sk_editor_settings', JSON.stringify(globalSettings));
-            }
-
-            // 2. Check Default Content Logo
             if (globalSettings.defaultSkLogo && globalSettings.defaultSkLogo.length > 500000) {
                 toastr.info("Optimizing Default SK Logo...", { timeOut: 2000 });
                 globalSettings.defaultSkLogo = await recompressBase64(globalSettings.defaultSkLogo, 300, 300, 0.7);
@@ -714,24 +672,26 @@ createApp({
             if (isSaving.value) return;
             isSaving.value = true;
             try {
-                // Sanitize Global Settings First (Fix large LocalStorage images)
                 await sanitizeGlobalSettings();
 
-                // Check payload size client-side first
-                const payloadSize = new Blob([JSON.stringify(formData) + JSON.stringify(globalSettings)]).size;
+                // Include mandatory settings in the save data
+                const saveData = { ...formData, mandatorySettings: { ...mandatorySettings } };
+                const saveSettings = { ...globalSettings, mandatorySettings: { ...mandatorySettings } };
+
+                const payloadSize = new Blob([JSON.stringify(saveData) + JSON.stringify(saveSettings)]).size;
                 if (payloadSize > 950000) {
                     const sizeMB = (payloadSize / 1024 / 1024).toFixed(2);
-                    toastr.error(`Data too large (${sizeMB}MB). Limit is ~0.95MB. Please compress images or ask admin to increase 'max_allowed_packet'.`);
+                    toastr.error('Data too large (' + sizeMB + 'MB). Limit is ~0.95MB. Please compress images.');
                     isSaving.value = false;
                     return;
                 }
 
-                const response = await fetch(`${siteUrl.value}sk_editor/save`, {
+                const response = await fetch(siteUrl.value + 'sk_editor/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: new URLSearchParams({
-                        data: JSON.stringify(formData),
-                        settings: JSON.stringify(globalSettings),
+                        data: JSON.stringify(saveData),
+                        settings: JSON.stringify(saveSettings),
                         template_id: templateId.value,
                         archive_id: archiveId.value || ''
                     })
@@ -748,10 +708,8 @@ createApp({
                 }
 
                 if (res.status === 'success') {
-                    toastr.success(`Draft Saved Successfully!`);
+                    toastr.success('Draft Saved Successfully!');
                     archiveId.value = res.id;
-                    const printBtn = document.getElementById('btn-print-hidden');
-                    if (printBtn) printBtn.dataset.id = res.id;
                 } else {
                     toastr.error('Error saving draft: ' + (res.message || 'Unknown error'));
                 }
@@ -767,9 +725,6 @@ createApp({
             const size = globalSettings.paperSize;
             const orientation = globalSettings.orientation;
 
-            // Use explicit dimensions for ALL sizes to force browser compliance
-            // A4: 210mm x 297mm
-            // F4: 215mm x 330mm
             let width, height;
 
             if (size === 'A4') {
@@ -777,37 +732,59 @@ createApp({
             } else if (size === 'F4') {
                 width = '215mm'; height = '330mm';
             } else {
-                width = '210mm'; height = '297mm'; // Default A4
+                width = '210mm'; height = '297mm';
             }
 
             if (orientation === 'landscape') {
-                return `${height} ${width}`; // Swap for landscape
+                return height + ' ' + width;
             }
-            return `${width} ${height}`;
+            return width + ' ' + height;
         };
 
         const printPdf = () => {
             const sizeCSS = getPageSizeCSS();
+            const [width, height] = sizeCSS.split(' ');
 
-            // Create a dynamic style element
             const style = document.createElement('style');
             style.id = 'dynamic-print-style';
-            // IMPORTANT: @page must be at the top level, NOT inside @media print
-            // We set margin to 0 here because we are handling margins inside .paper-page padding
-            // We ONLY inject page size here. Visibility is handled by static CSS in editor_view.php
             style.innerHTML = `
                 @page {
                     size: ${sizeCSS};
-                    margin: 0; 
+                    margin: 0;
+                }
+                @media print {
+                    html, body {
+                        width: ${width} !important;
+                        height: auto !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+                    
+                    #pagination-container {
+                        width: ${width} !important;
+                    }
+                    
+                    .paper-page {
+                        width: ${width} !important;
+                        height: ${height} !important;
+                        min-height: ${height} !important;
+                        max-height: ${height} !important;
+                        page-break-after: always !important;
+                        break-after: page !important;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+                    
+                    .paper-page:last-child {
+                        page-break-after: auto !important;
+                        break-after: auto !important;
+                    }
                 }
             `;
             document.head.appendChild(style);
 
-            // Print
             window.print();
 
-            // Cleanup after print dialog closes (or immediately, as styles persist until removed)
-            // We use a small timeout to ensure the print dialog has picked up the styles
             setTimeout(() => {
                 const el = document.getElementById('dynamic-print-style');
                 if (el) el.remove();
@@ -815,137 +792,49 @@ createApp({
         };
 
         const exportWord = () => {
-            // Use raw-content to get the full document
             const content = document.getElementById('raw-content').innerHTML;
             const sizeCSS = getPageSizeCSS();
 
-            const preHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-            <head><meta charset='utf-8'><title>Export Word</title>
-            <style>
-                /* Reset */
-                /* Reset */
-                body { font-family: 'Bookman Old Style', serif; font-size: 12pt; margin: 0; padding: 0; }
-                
-                /* Layout & Typography */
-                table { border-collapse: collapse; width: 100%; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
-                td { vertical-align: top; padding: 0; }
-                p { margin: 0; padding: 0; }
-                
-                /* List Styles Fixes */
-                ul, ol { margin: 0 0 0.5em 0; padding-left: 2em; list-style-position: outside; }
-                li { display: list-item; margin-bottom: 0.25em; }
-                ul { list-style-type: disc; }
-                ol { list-style-type: decimal; }
-                ol[type="a"], ol.lower-alpha { list-style-type: lower-alpha; }
-                ol[type="A"], ol.upper-alpha { list-style-type: upper-alpha; }
-                ol[type="i"], ol.lower-roman { list-style-type: lower-roman; }
-                ol[type="I"], ol.upper-roman { list-style-type: upper-roman; }
-
-                /* Tailwind Mappings */
-                .text-center { text-align: center; }
-                .text-right { text-align: right; }
-                .text-justify { text-align: justify; }
-                .font-bold { font-weight: bold; }
-                .uppercase { text-transform: uppercase; }
-                .underline { text-decoration: underline; }
-                .italic { font-style: italic; }
-                .text-xs { font-size: 10pt; }
-                .text-sm { font-size: 11pt; }
-                .text-lg { font-size: 14pt; }
-                .text-xl { font-size: 16pt; }
-                
-                .w-full { width: 100%; }
-                .w-1\\/2 { width: 50%; }
-                .w-24 { width: 96px; }
-                .w-32 { width: 128px; }
-                .w-20 { width: 80px; }
-                .w-4 { width: 16px; }
-                
-                .mb-4 { margin-bottom: 12pt; }
-                .mb-6 { margin-bottom: 18pt; }
-                .mb-8 { margin-bottom: 24pt; }
-                .pb-2 { padding-bottom: 6pt; }
-                .pl-4 { padding-left: 12pt; }
-                .mx-auto { margin-left: auto; margin-right: auto; }
-                
-                .border-b-4 { border-bottom: 4px solid black; }
-                .border-double { border-style: double; }
-                .border-black { border-color: black; }
-                
-                .align-middle { vertical-align: middle; }
-                .align-top { vertical-align: top; }
-                
-                /* Page Setup */
-                @page Section1 {
-                    size: ${sizeCSS};
-                    mso-page-orientation: ${globalSettings.orientation};
-                    margin: ${globalSettings.marginTop}mm ${globalSettings.marginRight}mm ${globalSettings.marginBottom}mm ${globalSettings.marginLeft}mm;
-                }
-                div.Section1 { page: Section1; }
-            </style>
-            </head><body><div class="Section1">`;
+            const preHtml = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>\n            <head><meta charset='utf-8'><title>Export Word</title>\n            <style>\n                body { font-family: 'Bookman Old Style', serif; font-size: 12pt; margin: 0; padding: 0; }\n                table { border-collapse: collapse; width: 100%; }\n                td { vertical-align: top; padding: 0; }\n                p { margin: 0; padding: 0; }\n                ul, ol { margin: 0 0 0.5em 0; padding-left: 2em; }\n                li { display: list-item; margin-bottom: 0.25em; }\n                .text-center { text-align: center; }\n                .text-right { text-align: right; }\n                .font-bold { font-weight: bold; }\n                .uppercase { text-transform: uppercase; }\n                .underline { text-decoration: underline; }\n                @page Section1 {\n                    size: " + sizeCSS + ";\n                    mso-page-orientation: " + globalSettings.orientation + ";\n                    margin: " + globalSettings.marginTop + "mm " + globalSettings.marginRight + "mm " + globalSettings.marginBottom + "mm " + globalSettings.marginLeft + "mm;\n                }\n                div.Section1 { page: Section1; }\n            </style>\n            </head><body><div class=\"Section1\">";
             const postHtml = "</div></body></html>";
 
-            // Note: content contains <div class="paper-preview">...</div> so styles inside .paper-preview might need adjustment
-            // But our styles above target elements directly. 
-            // We might want to strip the wrapper or just let it be.
-            // Let's rely on global tag selectors above.
-
             const html = preHtml + content + postHtml;
-
-            const blob = new Blob(['\ufeff', html], {
-                type: 'application/msword'
-            });
 
             const url = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(html);
 
             const link = document.createElement('a');
             link.href = url;
-            link.download = `SK_${formData.no_sk ? formData.no_sk.replace(/[^a-z0-9]/gi, '_') : 'Draft'}.doc`;
+            link.download = 'SK_' + (formData.no_sk ? formData.no_sk.replace(/[^a-z0-9]/gi, '_') : 'Draft') + '.doc';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         };
 
         const exportPdf = () => {
-            // User requested PDF to match browser print exactly.
-            // The best way is to trigger browser print and ask them to "Save as PDF".
             alert("To ensure the PDF matches the editor EXACTLY, please select 'Save as PDF' in the destination dropdown.");
-
-            const sizeCSS = getPageSizeCSS();
-            setTimeout(() => {
-                const el = document.getElementById('dynamic-print-style-pdf');
-                if (el) el.remove();
-            }, 1000);
+            printPdf();
         };
 
         const fixAutoFormatting = () => {
             const container = document.getElementById('raw-content');
             if (!container) return;
 
-            // Heuristic: Find "Menimbang" label and force list style
             const tds = container.querySelectorAll('td');
             tds.forEach(td => {
                 const text = td.textContent.trim();
-                // Check if this TD contains "Menimbang" (case-insensitive)
                 if (/^menimbang/i.test(text)) {
-                    // Look in next siblings for a list
                     let sibling = td.nextElementSibling;
                     while (sibling) {
                         const list = sibling.querySelector('ul, ol');
                         if (list) {
-                            // Enforce lower-alpha for Menimbang
                             list.style.listStyleType = 'lower-alpha';
                             if (list.tagName === 'OL') list.setAttribute('type', 'a');
-
-                            // Also ensure <li> items display correctly
                             const items = list.querySelectorAll('li');
                             items.forEach(li => li.style.display = 'list-item');
                         }
                         sibling = sibling.nextElementSibling;
                     }
                 }
-                // Check for "Mengingat" - usually 1, 2, 3 (decimal)
                 if (/^mengingat/i.test(text)) {
                     let sibling = td.nextElementSibling;
                     while (sibling) {
@@ -971,25 +860,15 @@ createApp({
             }
         };
 
-
-
-
-
-
-
-
-
         const paginate = () => {
             const rawContainer = document.getElementById('raw-content');
             const outputContainer = document.getElementById('pagination-container');
             if (!rawContainer || !outputContainer) return;
 
-            // Clear previous pages
             outputContainer.innerHTML = '';
 
-            // Get Page Dimensions from Settings
-            const mmToPx = 3.78; // Approx 96 DPI
-            let pageHeightMm = 297; // Default A4
+            const mmToPx = 3.78;
+            let pageHeightMm = 297;
             let pageWidthMm = 210;
 
             if (globalSettings.paperSize === 'F4') {
@@ -1000,28 +879,23 @@ createApp({
             }
 
             const pageHeightPx = pageHeightMm * mmToPx;
-            // Margins
             const marginTopPx = (globalSettings.marginTop || 20) * mmToPx;
             const marginBottomPx = (globalSettings.marginBottom || 20) * mmToPx;
             const contentHeightPx = pageHeightPx - marginTopPx - marginBottomPx;
 
             let pageCount = 0;
             let currentContent = null;
-            let currentH = 0;
 
             const createPage = () => {
                 pageCount++;
                 const page = document.createElement('div');
                 page.className = 'paper-page bg-white shadow-lg relative';
-                page.style.width = `${pageWidthMm}mm`;
-                page.style.height = `${pageHeightMm}mm`;
-                page.style.padding = `${globalSettings.marginTop}mm ${globalSettings.marginRight}mm ${globalSettings.marginBottom}mm ${globalSettings.marginLeft}mm`;
-
-                // TYPOGRAPHY
+                page.style.width = pageWidthMm + 'mm';
+                page.style.height = pageHeightMm + 'mm';
+                page.style.padding = globalSettings.marginTop + 'mm ' + globalSettings.marginRight + 'mm ' + globalSettings.marginBottom + 'mm ' + globalSettings.marginLeft + 'mm';
                 page.style.fontSize = globalSettings.fontSize || '12pt';
                 page.style.lineHeight = globalSettings.lineHeight || '1.5';
-                page.style.fontFamily = "'Bookman Old Style', serif"; // Force Font
-
+                page.style.fontFamily = "'Bookman Old Style', serif";
 
                 page.dataset.pageNum = pageCount;
 
@@ -1035,42 +909,31 @@ createApp({
                 outputContainer.appendChild(page);
 
                 currentContent = content;
-                currentH = 0;
                 return content;
             };
 
-            // Start First Page
             createPage();
 
             const hasOverflow = (container) => {
                 return container.scrollHeight > container.clientHeight + 1;
             };
 
-            // Recursive function to process nodes
             const processNode = (node) => {
                 if (node.nodeType === Node.TEXT_NODE && !node.textContent.trim()) return;
 
-                // 0. HANDLE ATTACHMENT BREAKS
                 if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('smart-attachment-break')) {
                     createPage();
-                    return; // The break itself is invisible, just triggers a new page
+                    return;
                 }
 
-                // 1. Try appending directly
                 currentContent.appendChild(node);
 
-                // 2. Check Overflow
                 if (hasOverflow(currentContent)) {
-                    // Overflow detected!
-
-                    // Remove node
                     currentContent.removeChild(node);
 
-                    // Strategy: Split if Table/List
                     const tag = node.tagName;
 
                     if (tag === 'TABLE') {
-                        // Split Table
                         const tbody = node.querySelector('tbody') || node;
                         const trs = Array.from(tbody.children).filter(n => n.tagName === 'TR');
 
@@ -1093,7 +956,7 @@ createApp({
                         });
 
                         if (remainingTrs.length > 0) {
-                            createPage(); // New Page
+                            createPage();
 
                             const tablePart2 = node.cloneNode(false);
                             const tbodyPart2 = document.createElement('tbody');
@@ -1103,7 +966,6 @@ createApp({
                         }
 
                     } else if (tag === 'UL' || tag === 'OL') {
-                        // Split List
                         const lis = Array.from(node.children);
                         const listPart1 = node.cloneNode(false);
                         currentContent.appendChild(listPart1);
@@ -1125,20 +987,15 @@ createApp({
                             processNode(listPart2);
                         }
                     } else {
-                        // Atomic Block -> Move to Next Page
                         createPage();
-
                         currentContent.appendChild(node);
-                        // If it still overflows, it's too big for one page. We leave it clipped.
                     }
                 }
             };
 
-            // Clone raw content nodes
             const sourceNodes = Array.from(rawContainer.children[0].cloneNode(true).childNodes);
             sourceNodes.forEach(node => processNode(node));
 
-            // 3. POST-PROCESS: PAGE NUMBERING
             if (globalSettings.showPageNumbers) {
                 const pages = outputContainer.querySelectorAll('.paper-page');
                 const totalPages = pages.length;
@@ -1146,10 +1003,10 @@ createApp({
                     const pageNum = index + 1;
                     const footer = document.createElement('div');
                     footer.className = 'page-footer absolute text-xs text-gray-500';
-                    footer.style.bottom = `${globalSettings.marginBottom / 2}mm`; // Position in the margin area
-                    footer.style.right = `${globalSettings.marginRight}mm`;
-                    footer.style.fontFamily = 'Arial, sans-serif'; // Footer usually standard font
-                    footer.innerText = `Halaman ${pageNum} dari ${totalPages}`;
+                    footer.style.bottom = (globalSettings.marginBottom / 2) + 'mm';
+                    footer.style.right = globalSettings.marginRight + 'mm';
+                    footer.style.fontFamily = 'Arial, sans-serif';
+                    footer.innerText = 'Halaman ' + pageNum + ' dari ' + totalPages;
                     page.appendChild(footer);
                 });
             }
@@ -1172,31 +1029,30 @@ createApp({
         watch(() => globalSettings.showPageNumbers, () => Vue.nextTick(paginate));
 
         // Initial Pagination
-        // Initial Pagination
         onMounted(() => {
-            // Wait for DOM & Styles to fully settle (especially images/fonts)
             setTimeout(() => {
                 fixAutoFormatting();
                 paginate();
 
-                // Initialize TinyMCE for existing attachments
                 if (formData.attachments && formData.attachments.length > 0) {
                     formData.attachments.forEach((_, index) => {
-                        const id = `attachment-editor-${index}`;
+                        const id = 'attachment-editor-' + index;
                         initTinyMCE(id, index);
                     });
                 }
-            }, 500); // 500ms delay for robustness
+            }, 500);
         });
 
         return {
-            config,
+            templateVariables,
             formData,
+            mandatorySettings,
             globalSettings,
             isDarkMode,
             toggleTheme,
             previewHtml,
             paperStyle,
+            getFieldInputType,
             addRepeaterItem,
             removeRepeaterItem,
             addAttachment,
@@ -1210,17 +1066,19 @@ createApp({
             pejabatList,
             paginate,
             handleContentLogoUpload,
-            handleLogoUpload,
             handleGenericImageUpload,
             isSidebarOpen,
             toggleSidebar,
-            activeSections,
-            toggleSection,
+            isDataSectionOpen,
+            toggleDataSection,
+            isMandatorySectionOpen,
+            toggleMandatorySection,
             zoomScale,
             zoomIn,
             zoomOut,
             resetZoom,
-            saveAsDefault
+            saveAsDefault,
+            activeTab
         };
     }
 }).mount('#app');

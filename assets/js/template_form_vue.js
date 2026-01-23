@@ -9,29 +9,7 @@ createApp({
             nama_sk: TEMPLATE_DATA.nama_sk || '',
             kategori: TEMPLATE_DATA.kategori || 'kepegawaian',
             nomor_pattern: TEMPLATE_DATA.nomor_pattern || '',
-            html_pattern: TEMPLATE_DATA.html_pattern || `<!-- KOP SURAT -->
-    {{#if showKop}}
-    <div class="header-kop text-center border-b-4 border-double border-black pb-2 mb-4">
-        <table class="w-full">
-            <tr>
-                <td class="w-24 align-middle">
-                    <img src="{{globalSettings.kopLogo}}" alt="Logo" style="width: {{globalSettings.kopLogoWidth}}px; max-width: none;" class="mx-auto">
-                </td>
-                <td class="align-middle text-center">
-                    <h3 class="font-bold text-lg uppercase">{{globalSettings.kopTitle1}}</h3>
-                    <h2 class="font-bold text-lg uppercase">{{globalSettings.kopTitle2}}</h2>
-                    <h2 class="font-bold text-lg uppercase">{{globalSettings.kopTitle3}}</h2>
-                    <h1 class="font-bold text-lg uppercase">{{globalSettings.kopTitle4}}</h1>
-                    <p class="text-xs italic">{{globalSettings.kopAddress}}</p>
-                </td>
-            </tr>
-        </table>
-    </div>
-    {{/if}}
-
-    <div class="text-center mb-6">
-        <img src="{{globalSettings.kopLogo}}" alt="Logo" class="w-20 mx-auto">
-        <br>
+            html_pattern: TEMPLATE_DATA.html_pattern || `<div class="text-center mb-6">
         {{#if logo_tengah}}
         <div class="mb-4">
              <img src="{{logo_tengah}}" style="width: {{logo_tengah_width}}px; max-width: none;" class="mx-auto">

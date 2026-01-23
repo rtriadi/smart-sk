@@ -1,6 +1,6 @@
 <!-- Dependencies required for this view -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <style>[v-cloak] { display: none; }</style>
@@ -65,41 +65,8 @@
                         </div>
                     </div>
 
-                    <!-- Kop Surat -->
-                    <div class="space-y-4">
-                        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between items-center">
-                            Kop Surat
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" v-model="generalSettings.showKop" class="sr-only peer">
-                                <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
-                            </label>
-                        </h3>
-                        
-                        <div v-if="generalSettings.showKop" class="space-y-3 p-4 bg-slate-50 rounded-lg border border-slate-100">
-                            <div>
-                                <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Header Text</label>
-                                <input type="text" v-model="generalSettings.kopTitle1" class="w-full mb-2 rounded border-slate-300 px-2 py-1 text-sm placeholder-slate-400" placeholder="Line 1">
-                                <input type="text" v-model="generalSettings.kopTitle2" class="w-full mb-2 rounded border-slate-300 px-2 py-1 text-sm placeholder-slate-400" placeholder="Line 2">
-                                <input type="text" v-model="generalSettings.kopTitle3" class="w-full mb-2 rounded border-slate-300 px-2 py-1 text-sm placeholder-slate-400" placeholder="Line 3">
-                                <input type="text" v-model="generalSettings.kopTitle4" class="w-full mb-2 rounded border-slate-300 px-2 py-1 text-sm placeholder-slate-400" placeholder="Line 4">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Address</label>
-                                <textarea v-model="generalSettings.kopAddress" rows="2" class="w-full rounded border-slate-300 px-2 py-1 text-sm placeholder-slate-400"></textarea>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Logo</label>
-                                <!-- File Upload for Global Logo -->
-                                <input type="file" @change="handleGlobalLogoUpload" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 mb-2">
-                                
-                                <!-- Preview -->
-                                <div v-if="generalSettings.kopLogo" class="mt-2 bg-white p-2 rounded border border-slate-200">
-                                    <img :src="generalSettings.kopLogo" class="max-h-16 object-contain mx-auto">
-                                </div>
-                                <input type="hidden" v-model="generalSettings.kopLogo">
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Kop Surat Removed -->
+
                     
                     <!-- Typography & Extras -->
                     <div class="pt-4 border-t border-slate-100">
@@ -290,16 +257,9 @@
             const DEFAULT_SETTINGS = {
                 paperSize: 'A4', 
                 orientation: 'portrait',
-                marginTop: 20, marginBottom: 20, marginLeft: 25, marginRight: 20,
+                marginTop: 20, marginBottom: 20, marginLeft: 20, marginRight: 20,
                 fontSize: '12pt', lineHeight: '1.5', showPageNumbers: false,
-                defaultSkLogo: '', 
-                showKop: true,
-                kopLogo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Logo_of_the_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg/1200px-Logo_of_the_Ministry_of_Religious_Affairs_of_the_Republic_of_Indonesia.svg.png',
-                kopTitle1: 'MAHKAMAH AGUNG REPUBLIK INDONESIA',
-                kopTitle2: 'DIREKTORAT JENDERAL BADAN PERADILAN AGAMA',
-                kopTitle3: 'PENGADILAN TINGGI AGAMA GORONTALO',
-                kopTitle4: 'PENGADILAN AGAMA GORONTALO',
-                kopAddress: 'Jalan Achmad Nadjamuddin No.22, Dulalowo Timur, Kecamatan Kota Tengah\nKota Gorontalo, 96138. www.pa-gorontalo.go.id, surat@pa-gorontalo.go.id'
+                defaultSkLogo: ''
             };
 
             const activeTab = ref('general');
@@ -396,15 +356,6 @@
                 reader.readAsDataURL(file);
             };
 
-            const handleGlobalLogoUpload = (event) => {
-                const file = event.target.files[0];
-                if (file) {
-                     compressImage(file, 800, 400, 0.7, (dataUrl) => {
-                        generalSettings.kopLogo = dataUrl;
-                    });
-                }
-            };
-
             const handleContentLogoUpload = (event) => {
                  const file = event.target.files[0];
                  if (file) {
@@ -418,7 +369,7 @@
                 activeTab, 
                 pejabatList, categoryList, form, catForm, isEditing, isEditingCat, 
                 editPejabat, resetForm, editCategory, resetCatForm,
-                generalSettings, saveGeneralSettings, handleGlobalLogoUpload, handleContentLogoUpload
+                generalSettings, saveGeneralSettings, handleContentLogoUpload
             };
 
         }

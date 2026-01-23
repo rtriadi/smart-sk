@@ -1,315 +1,251 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Template</title>
-    
-    <!-- Tailwind CSS (CDN) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        navy: { 900: '#0f172a' },
-                        teal: { 500: '#14b8a6', 600: '#0d9488' }
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Vue 3 (CDN) -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <!-- Ace Editor (CDN) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.min.js"></script>
 
-    <script>
-        var TEMPLATE_DATA = {}; // Empty for create
-        var CATEGORIES = <?php echo json_encode($categories); ?>;
-        var SITE_URL = '<?php echo site_url(); ?>';
-        var IS_EDIT = false;
-    </script>
-    <style>
-        [v-cloak] { display: none; }
-        .ace-editor { height: 400px; border-radius: 0.5rem; }
-    </style>
-</head>
-<body class="bg-navy-900 min-h-screen flex flex-col text-slate-100 font-sans">
+<!-- TinyMCE (Vue already loaded by enterprise_layout) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/5.10.7/tinymce.min.js" referrerpolicy="origin"></script>
 
-<div id="app" v-cloak class="container mx-auto px-4 py-8 flex-1">
-    
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-slate-700 pb-4">
-        <div class="flex items-center mb-4 md:mb-0">
-            <a href="<?php echo site_url('sk_editor'); ?>" class="text-slate-400 hover:text-teal-400 mr-4 transition flex items-center group">
-                <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-slate-700 transition">
-                    <i class="fas fa-arrow-left"></i>
+<script>
+    var TEMPLATE_DATA = {}; // Empty for create
+    var TEMPLATE_INITIAL_DATA = TEMPLATE_DATA;
+    var CATEGORIES = <?php echo json_encode($categories); ?>;
+    var SITE_URL = '<?php echo site_url(); ?>';
+    var IS_EDIT = false;
+</script>
+
+<style>
+    [v-cloak] { display: none; }
+</style>
+
+<div class="space-y-6">
+    <!-- Vue App for Header/Form -->
+    <div id="template-app" v-cloak>
+        <!-- Header Section -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <div class="flex items-center gap-4">
+                <a href="<?php echo site_url('templates'); ?>" 
+                    class="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all" 
+                    title="Kembali">
+                    <i class="fas fa-arrow-left text-lg"></i>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-800">Buat Template Baru</h1>
+                    <p class="text-slate-500 text-sm mt-0.5">Desain template Surat Keputusan dengan visual editor</p>
                 </div>
-            </a>
-            <div>
-                <h1 class="text-2xl font-bold text-white tracking-tight">Create New Template</h1>
-                <p class="text-xs text-slate-400">Design your letterhead and form configuration</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button @click="showHelp = true" 
+                    class="px-4 py-2 text-slate-600 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all flex items-center gap-2 border border-slate-200">
+                    <i class="fas fa-question-circle"></i>
+                    <span>Panduan</span>
+                </button>
+                <button @click="saveTemplate" 
+                    class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-lg font-medium transition shadow-md shadow-teal-500/20 flex items-center gap-2">
+                    <i class="fas fa-save"></i>
+                    <span>Simpan Template</span>
+                </button>
             </div>
         </div>
-        <div class="flex flex-wrap justify-center gap-2 w-full md:w-auto">
-            <a href="<?php echo site_url('sk_editor'); ?>" class="px-4 py-2 rounded text-slate-300 hover:bg-slate-800 transition text-center border border-transparent hover:border-slate-700">
-                <i class="fas fa-times md:hidden"></i> <span class="hidden md:inline">Cancel</span>
-            </a>
-            <button @click="showHelp = true" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded font-medium transition flex items-center shadow-sm">
-                <i class="fas fa-question-circle md:mr-2"></i> <span class="hidden md:inline">Panduan</span>
-            </button>
-            <button @click="saveTemplate" class="bg-teal-600 hover:bg-teal-500 text-white px-6 py-2 rounded font-bold transition flex items-center shadow-md shadow-teal-900/20">
-                <i class="fas fa-save md:mr-2"></i> <span class="hidden md:inline">Save Template</span>
-            </button>
-        </div>
-    </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Left Column: Basic Info -->
-        <div class="space-y-6">
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
-                <h3 class="text-lg font-bold text-blue-400 mb-4 uppercase tracking-wider">Basic Information</h3>
-                
-                <div class="mb-4">
-                    <label class="block text-gray-400 text-sm font-bold mb-2">Nama SK</label>
-                    <input type="text" v-model="form.nama_sk" class="w-full bg-gray-900 border border-gray-600 text-white rounded px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
+        <!-- Template Info Card -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+            <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Informasi Template</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Name -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Nama Template <span class="text-red-500">*</span></label>
+                    <input type="text" v-model="form.nama_sk" 
+                        class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition" 
+                        placeholder="Contoh: SK Pemberhentian Pegawai">
                 </div>
-
-                <div class="mb-4">
-                    <label class="block text-gray-400 text-sm font-bold mb-2">Kategori</label>
-                    <select v-model="form.kategori" class="w-full bg-gray-900 border border-gray-600 text-white rounded px-3 py-2 focus:border-blue-500 outline-none transition">
-                        <option value="" disabled>Select Category</option>
+                <!-- Category -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Kategori <span class="text-red-500">*</span></label>
+                    <select v-model="form.kategori" 
+                        class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-white">
+                        <option value="" disabled>Pilih Kategori</option>
                         <option v-for="c in categories" :key="c.id" :value="c.category_name">{{ c.category_name }}</option>
                     </select>
                 </div>
-
-                <div class="mb-4">
-                    <label class="block text-gray-400 text-sm font-bold mb-2">Nomor Pattern</label>
-                    <input type="text" v-model="form.nomor_pattern" placeholder="e.g. W26-A/SK.OT1.6/{bulan}/{tahun}" class="w-full bg-gray-900 border border-gray-600 text-white rounded px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
-                    <p class="text-gray-500 text-xs mt-1">Use {bulan}, {tahun} for auto-replacement.</p>
+                <!-- Pattern -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Pola Nomor Surat</label>
+                    <input type="text" v-model="form.nomor_pattern" 
+                        class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition font-mono text-sm" 
+                        placeholder="Contoh: W26-A/SK/{nomor}/{bulan}/{tahun}">
+                    <p class="text-xs text-slate-400 mt-1">Gunakan {bulan}, {tahun}, {nomor} untuk auto-replacement</p>
                 </div>
-            </div>
-
-            <!-- JSON Config Editor -->
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 flex flex-col h-[500px]" style="display:none;">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-yellow-400 uppercase tracking-wider">Form Config (JSON)</h3>
-                    <span class="text-xs text-gray-500 bg-gray-900 px-2 py-1 rounded">JSON Mode</span>
-                </div>
-                <div id="json-editor" class="ace-editor flex-1"></div>
             </div>
         </div>
 
-        <!-- Right Column: HTML Editor -->
-        <div class="lg:col-span-2">
-            <!-- Legacy Editor Hidden -->
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 flex flex-col h-full min-h-[800px]" style="display:none;">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-green-400 uppercase tracking-wider">HTML Pattern</h3>
-                    <span class="text-xs text-gray-500 bg-gray-900 px-2 py-1 rounded">HTML Mode</span>
+        <!-- Hidden Form for Submission -->
+        <form id="template-form" method="POST" action="<?php echo site_url('templates/store'); ?>" style="display: none;">
+            <input type="hidden" name="nama_sk" id="input_nama_sk">
+            <input type="hidden" name="kategori" id="input_kategori">
+            <input type="hidden" name="nomor_pattern" id="input_nomor_pattern">
+            <input type="hidden" name="form_config" id="form_config">
+            <input type="hidden" name="html_pattern" id="html_pattern">
+        </form>
+
+        <!-- Help Modal -->
+        <div v-if="showHelp" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4" @click.self="showHelp = false">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center px-8 py-5 border-b border-slate-200 bg-gradient-to-r from-teal-600 to-teal-500">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">Panduan Pembuatan Template SK</h2>
+                        <p class="text-teal-100 text-sm mt-1">Pelajari cara membuat template dokumen yang dinamis</p>
+                    </div>
+                    <button @click="showHelp = false" class="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-lg transition">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
                 </div>
-                <div id="html-editor" class="ace-editor flex-1"></div>
-            </div>
-
-            <!-- New Template Builder App -->
-            <!-- v-pre ensures the outer Vue app (template_form_vue.js) ignores this section, allowing the inner Vue app to mount -->
-            <div v-pre id="template-builder-app" class="h-full min-h-[800px]"></div>
-        </div>
-    </div>
-
-    <!-- Help Modal -->
-    <div v-if="showHelp" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" @click.self="showHelp = false">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-gray-700">
-            <div class="flex justify-between items-center p-6 border-b border-gray-700">
-                <h2 class="text-2xl font-bold text-white">Panduan Pembuatan Template SK</h2>
-                <button @click="showHelp = false" class="text-gray-400 hover:text-white text-xl">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <div class="p-6 overflow-y-auto space-y-8 text-gray-300" v-pre>
                 
-                <!-- Section 1: Konsep Dasar -->
-                <div>
-                    <h3 class="text-xl font-bold text-blue-400 mb-2">1. Konsep Dasar</h3>
-                    <p class="mb-2">Pembuatan template terdiri dari dua bagian yang saling terhubung:</p>
-                    <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Form Config (JSON):</strong> Mendefinisikan inputan apa saja yang akan muncul di form pengisian (sebelah kiri editor). Setiap field memiliki <code>variable</code>.</li>
-                        <li><strong>HTML Pattern:</strong> Desain tampilan surat. Gunakan <code>{{variable}}</code> untuk menampilkan data dari form ke dalam surat.</li>
-                    </ul>
-                </div>
-
-                <!-- Section 2: JSON Config -->
-                <div>
-                    <h3 class="text-xl font-bold text-yellow-400 mb-2">2. Struktur JSON Config</h3>
-                    <p class="mb-2">Format JSON adalah array dari "Section". Contoh sederhana:</p>
-                    <pre class="bg-gray-900 p-3 rounded text-sm font-mono border border-gray-700">
-[
-  {
-    "title": "DATA UTAMA",
-    "fields": [
-      {
-        "type": "text",
-        "label": "Nomor Surat",
-        "variable": "no_sk",
-        "default": "..."
-      },
-      {
-         "type": "date",
-         "label": "Tanggal",
-         "variable": "tanggal_sk"
-      }
-    ]
-  }
-]</pre>
-                    <div class="mt-4">
-                        <h4 class="font-bold text-white mb-2">Tipe Field yang Tersedia:</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="bg-gray-900 p-3 rounded border border-gray-700">
-                                <span class="text-green-400 font-bold">text</span>
-                                <p class="text-xs">Input teks singkat (satu baris).</p>
-                            </div>
-                            <div class="bg-gray-900 p-3 rounded border border-gray-700">
-                                <span class="text-green-400 font-bold">textarea</span>
-                                <p class="text-xs">Input teks panjang (paragraf).</p>
-                            </div>
-                            <div class="bg-gray-900 p-3 rounded border border-gray-700">
-                                <span class="text-green-400 font-bold">date</span>
-                                <p class="text-xs">Pemilih tanggal. Otomatis menghasilkan <code>{{tanggal_indo}}</code> & <code>{{tanggal_hijri}}</code>.</p>
-                            </div>
-                            <div class="bg-gray-900 p-3 rounded border border-gray-700">
-                                <span class="text-green-400 font-bold">select</span>
-                                <p class="text-xs">Dropdown pilihan. Perlu properti <code>options: ["A", "B"]</code>.</p>
-                            </div>
-                            <div class="bg-gray-900 p-3 rounded border border-gray-700">
-                                <span class="text-green-400 font-bold">checkbox</span>
-                                <p class="text-xs">Switch on/off. Menghasilkan nilai true/false. Berguna untuk logika <code>{{#if}}</code>.</p>
-                            </div>
-                            <div class="bg-gray-900 p-3 rounded border border-gray-700">
-                                <span class="text-green-400 font-bold">repeater</span>
-                                <p class="text-xs">Daftar dinamis (Tambah/Hapus item). Contoh: Menimbang, Mengingat.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section 3: HTML Pattern -->
-                <div>
-                    <h3 class="text-xl font-bold text-green-400 mb-2">3. HTML Pattern & Variabel</h3>
-                    <p class="mb-4">Gunakan HTML standar dengan syntax Handlebars untuk menyisipkan data.</p>
+                <!-- Modal Content -->
+                <div class="p-8 overflow-y-auto flex-1 space-y-8">
                     
-                    <h4 class="font-bold text-white mb-2">Variabel Sistem (Otomatis Tersedia)</h4>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-left text-gray-400 border border-gray-700">
-                            <thead class="text-xs text-gray-200 uppercase bg-gray-700">
-                                <tr>
-                                    <th class="px-4 py-2">Variabel</th>
-                                    <th class="px-4 py-2">Keterangan</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr class="bg-gray-800 border-b border-gray-700">
-                                    <td class="px-4 py-2 font-mono text-blue-300">{{tanggal_indo}}</td>
-                                    <td class="px-4 py-2">Tanggal format Indonesia (contoh: 12 Desember 2024). Muncul otomatis jika ada input <code>type: "date"</code>.</td>
-                                </tr>
-                                <tr class="bg-gray-800 border-b border-gray-700">
-                                    <td class="px-4 py-2 font-mono text-blue-300">{{tanggal_hijri}}</td>
-                                    <td class="px-4 py-2">Tanggal format Hijriah. Muncul otomatis mendampingi tanggal masehi.</td>
-                                </tr>
-                                <tr class="bg-gray-800 border-b border-gray-700">
-                                    <td class="px-4 py-2 font-mono text-purple-300">{{globalSettings.kopTitle1}}</td>
-                                    <td class="px-4 py-2">Judul Kop Surat Baris 1 (dari Global Settings). Tersedia Title1 s.d Title4.</td>
-                                </tr>
-                                <tr class="bg-gray-800 border-b border-gray-700">
-                                    <td class="px-4 py-2 font-mono text-purple-300">{{globalSettings.kopAddress}}</td>
-                                    <td class="px-4 py-2">Alamat Kantor (dari Global Settings).</td>
-                                </tr>
-                                <tr class="bg-gray-800 border-b border-gray-700">
-                                    <td class="px-4 py-2 font-mono text-purple-300">{{globalSettings.kopLogo}}</td>
-                                    <td class="px-4 py-2">URL Logo Instansi. Gunakan di dalam tag img src.</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <!-- Quick Start -->
+                    <div class="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-6 border border-teal-100">
+                        <h3 class="text-lg font-bold text-teal-700 mb-3 flex items-center gap-2">
+                            <i class="fas fa-rocket"></i> Quick Start
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-white rounded-lg p-4 shadow-sm border border-teal-100">
+                                <div class="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 font-bold mb-2">1</div>
+                                <p class="text-sm text-slate-600">Ketik konten surat di <strong>editor visual</strong></p>
+                            </div>
+                            <div class="bg-white rounded-lg p-4 shadow-sm border border-teal-100">
+                                <div class="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 font-bold mb-2">2</div>
+                                <p class="text-sm text-slate-600">Seleksi teks yang ingin jadi <strong>variabel dinamis</strong>, klik "Make Variable"</p>
+                            </div>
+                            <div class="bg-white rounded-lg p-4 shadow-sm border border-teal-100">
+                                <div class="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 font-bold mb-2">3</div>
+                                <p class="text-sm text-slate-600">Atau klik <strong>"+ Tambah Variabel"</strong> di sidebar untuk menambah variabel baru</p>
+                            </div>
+                        </div>
                     </div>
 
-                    <h4 class="font-bold text-white mt-4 mb-2">Syntax Logika</h4>
-                    <div class="space-y-4">
-                        <div class="bg-gray-900 p-4 rounded border border-gray-700">
-                            <p class="font-bold text-gray-300 mb-1">Mencetak Variabel:</p>
-                            <code class="text-blue-300">{{variabel_anda}}</code>
-                        </div>
-                        <div class="bg-gray-900 p-4 rounded border border-gray-700">
-                            <p class="font-bold text-gray-300 mb-1">Looping (Untuk Repeater):</p>
-                            <pre class="text-green-300 text-sm">
-&lt;ol&gt;
-  {{#each list_menimbang}}
-    &lt;li&gt;{{this}}&lt;/li&gt;
-  {{/each}}
-&lt;/ol&gt;</pre>
-                        </div>
-                        <div class="bg-gray-900 p-4 rounded border border-gray-700">
-                            <p class="font-bold text-gray-300 mb-1">Kondisional (If):</p>
-                            <pre class="text-yellow-300 text-sm">
-{{#if tampilkan_salinan}}
-  &lt;div&gt;Ini hanya muncul jika checkbox dicentang&lt;/div&gt;
-{{/if}}</pre>
+                    <!-- Section 1: Konsep Dasar -->
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <span class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 font-bold text-sm">1</span>
+                            Konsep Dasar
+                        </h3>
+                        <div class="bg-slate-50 rounded-xl p-5 border border-slate-200">
+                            <p class="text-slate-600 mb-4">Template terdiri dari dua komponen utama yang saling terhubung:</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-white rounded-lg p-4 border border-slate-200">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <i class="fas fa-code text-yellow-500"></i>
+                                        <span class="font-bold text-slate-700">Form Config (Variabel)</span>
+                                    </div>
+                                    <p class="text-sm text-slate-500">Mendefinisikan input apa saja yang akan muncul saat membuat SK.</p>
+                                </div>
+                                <div class="bg-white rounded-lg p-4 border border-slate-200">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <i class="fas fa-file-code text-green-500"></i>
+                                        <span class="font-bold text-slate-700">HTML Pattern</span>
+                                    </div>
+                                    <p class="text-sm text-slate-500">Desain tampilan surat. Gunakan &#123;&#123;variable&#125;&#125; untuk data dinamis.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Section 2: Tipe Field -->
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <span class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center text-yellow-600 font-bold text-sm">2</span>
+                            Tipe Field yang Tersedia
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div class="bg-white rounded-lg p-4 border border-slate-200">
+                                <span class="font-bold text-green-600">text</span> - Input teks singkat
+                            </div>
+                            <div class="bg-white rounded-lg p-4 border border-slate-200">
+                                <span class="font-bold text-green-600">textarea</span> - Input teks panjang
+                            </div>
+                            <div class="bg-white rounded-lg p-4 border border-slate-200">
+                                <span class="font-bold text-green-600">date</span> - Pemilih tanggal
+                            </div>
+                            <div class="bg-white rounded-lg p-4 border border-slate-200">
+                                <span class="font-bold text-green-600">number</span> - Input angka
+                            </div>
+                            <div class="bg-white rounded-lg p-4 border border-slate-200">
+                                <span class="font-bold text-green-600">richtext</span> - Editor teks kaya
+                            </div>
+                            <div class="bg-white rounded-lg p-4 border border-slate-200">
+                                <span class="font-bold text-green-600">select</span> - Dropdown pilihan
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
-
-            </div>
-            
-            <div class="p-6 border-t border-gray-700 flex justify-end">
-                <button @click="showHelp = false" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded font-bold transition">
-                    Tutup Panduan
-                </button>
+                
+                <!-- Modal Footer -->
+                <div class="px-8 py-4 border-t border-slate-200 bg-slate-50 flex justify-end">
+                    <button @click="showHelp = false" class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-lg font-medium transition">
+                        Tutup Panduan
+                    </button>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- Template Builder Container - OUTSIDE Vue template-app -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div id="template-builder-app" class="h-[700px]"></div>
+    </div>
 </div>
 
-<div class="mt-auto border-t border-gray-700 pt-6 pb-6 text-center bg-gray-900">
-    <p class="text-xs text-gray-400 font-medium">
-        Developed by Rahmat Triadi, S.Kom. &copy; <?= date('Y') ?>
-    </p>
-</div>
-
-<!-- Template Builder Logic -->
+<!-- Template Builder Logic (runs first, mounts to #template-builder-app) -->
 <script src="<?php echo base_url('assets/js/template_builder_vue.js'); ?>"></script>
 
-<!-- Sync Logic: Bridge Template Builder to Legacy Ace Editors for Saving -->
+<!-- Vue Logic for Form (mounts to #template-app) -->
 <script>
-    setInterval(() => {
-        if (window.TemplateBuilderExport) {
-            // Sync HTML Pattern
-            if (window.TemplateBuilderExport.html_pattern !== undefined) {
-                try {
-                    var htmlEditor = ace.edit("html-editor");
-                    if (htmlEditor && htmlEditor.getValue() !== window.TemplateBuilderExport.html_pattern) {
-                        htmlEditor.setValue(window.TemplateBuilderExport.html_pattern, -1);
-                    }
-                } catch(e) {}
-            }
-            // Sync Form Config
-            if (window.TemplateBuilderExport.form_config !== undefined) {
-                try {
-                    var jsonEditor = ace.edit("json-editor");
-                    if (jsonEditor && jsonEditor.getValue() !== window.TemplateBuilderExport.form_config) {
-                        jsonEditor.setValue(window.TemplateBuilderExport.form_config, -1);
-                    }
-                } catch(e) {}
-            }
-        }
-    }, 1000);
-</script>
+(function() {
+    const { createApp, ref } = Vue;
 
-<!-- Vue Logic -->
-<script src="<?php echo base_url('assets/js/template_form_vue.js'); ?>"></script>
-</body>
-</html>
+    createApp({
+        setup() {
+            const form = ref({
+                nama_sk: '',
+                kategori: '',
+                nomor_pattern: ''
+            });
+            
+            const categories = ref(CATEGORIES || []);
+            const showHelp = ref(false);
+
+            const saveTemplate = () => {
+                // Validate
+                if (!form.value.nama_sk.trim()) {
+                    alert('Nama template harus diisi!');
+                    return;
+                }
+                if (!form.value.kategori) {
+                    alert('Kategori harus dipilih!');
+                    return;
+                }
+
+                // Get data from Template Builder
+                const builderData = window.TemplateBuilderExport || {};
+
+                // Populate hidden form
+                document.getElementById('input_nama_sk').value = form.value.nama_sk;
+                document.getElementById('input_kategori').value = form.value.kategori;
+                document.getElementById('input_nomor_pattern').value = form.value.nomor_pattern;
+                document.getElementById('form_config').value = builderData.form_config || '[]';
+                document.getElementById('html_pattern').value = builderData.html_pattern || '';
+
+                // Submit
+                document.getElementById('template-form').submit();
+            };
+
+            return {
+                form,
+                categories,
+                showHelp,
+                saveTemplate
+            };
+        }
+    }).mount('#template-app');
+})();
+</script>

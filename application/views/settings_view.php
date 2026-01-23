@@ -139,38 +139,7 @@
                 </div>
             </div>
 
-            <!-- Kop Surat Settings -->
-            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 transition-colors duration-200 lg:col-span-2">
-                <div class="flex justify-between items-center mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">
-                    <h3 class="text-lg font-bold text-emerald-600 dark:text-green-400 uppercase tracking-wider">Kop Surat Defaults</h3>
-                    <label class="flex items-center cursor-pointer">
-                        <span class="mr-2 text-sm text-slate-600 dark:text-gray-400 font-medium">Show by default</span>
-                        <input type="checkbox" v-model="settings.showKop" class="w-5 h-5 text-indigo-600 bg-white border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                    </label>
-                </div>
-    
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-slate-700 dark:text-gray-400 text-sm font-semibold mb-1">Logo (Base64/URL)</label>
-                        <div class="flex gap-2">
-                            <input type="text" v-model="settings.kopLogo" class="flex-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-slate-900 dark:text-white rounded px-3 py-2 text-xs shadow-sm focus:border-indigo-500 focus:outline-none">
-                            <input type="file" @change="handleLogoUpload" accept="image/*" class="hidden" id="logo-upload">
-                            <label for="logo-upload" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-slate-600 dark:text-white px-3 py-2 rounded cursor-pointer text-xs flex items-center border border-gray-200 dark:border-gray-600 transition shadow-sm">
-                                <i class="fas fa-upload"></i>
-                            </label>
-                        </div>
-                        <div v-if="settings.kopLogo" class="mt-2 bg-gray-50 border border-gray-200 p-2 rounded inline-block">
-                            <img :src="settings.kopLogo" class="h-12 object-contain">
-                        </div>
-                    </div>
-                    
-                    <input type="text" v-model="settings.kopTitle1" placeholder="Line 1 (e.g. MAHKAMAH AGUNG RI)" class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-slate-900 dark:text-white rounded px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none">
-                    <input type="text" v-model="settings.kopTitle2" placeholder="Line 2 (e.g. DIREKTORAT JENDERAL...)" class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-slate-900 dark:text-white rounded px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none">
-                    <input type="text" v-model="settings.kopTitle3" placeholder="Line 3 (e.g. PENGADILAN TINGGI AGAMA...)" class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-slate-900 dark:text-white rounded px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none">
-                    <input type="text" v-model="settings.kopTitle4" placeholder="Line 4 (e.g. PENGADILAN AGAMA GORONTALO)" class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-slate-900 dark:text-white rounded px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none">
-                    <textarea v-model="settings.kopAddress" rows="2" placeholder="Address" class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-slate-900 dark:text-white rounded px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none"></textarea>
-                </div>
-            </div>
+
     
         </div>
     
@@ -181,23 +150,16 @@
     
     createApp({
         setup() {
-            const defaultSettings = {
+        const defaultSettings = {
                 paperSize: 'A4',
                 orientation: 'portrait',
                 marginTop: 20,
                 marginBottom: 20,
                 marginLeft: 20,
                 marginRight: 20,
-                showKop: true,
                 fontSize: '12pt',
                 lineHeight: '1.5',
-                showPageNumbers: false,
-                kopLogo: '', // Base64 string
-                kopTitle1: '',
-                kopTitle2: '',
-                kopTitle3: '',
-                kopTitle4: '',
-                kopAddress: ''
+                showPageNumbers: false
             };
     
             const settings = ref({ ...defaultSettings });
@@ -241,23 +203,11 @@
                 alert('Settings Saved! These will be applied to all new and existing drafts.');
             };
     
-            const handleLogoUpload = (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
-    
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    settings.value.kopLogo = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            };
-    
             const dashboardUrl = () => SITE_URL + 'sk_editor'; // Use 'sk_editor' controller index as dashboard
     
             return {
                 settings,
                 saveSettings,
-                handleLogoUpload,
                 dashboardUrl,
                 isDarkMode,
                 toggleTheme

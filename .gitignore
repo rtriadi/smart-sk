@@ -30,3 +30,11 @@ user_guide_src/cilexer/pycilexer.egg-info/*
 *.sublime-project
 /tests/tests/
 /tests/results/
+
+# Debug/Temp files
+debug_sk_save.txt
+cookies.txt
+test_pagebreak.html
+nul
+temp_template.txt
+*.log

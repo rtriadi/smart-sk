@@ -9,7 +9,11 @@ class Archive_model extends CI_Model {
     }
 
     public function get_all_archives() {
-        return $this->db->get('tb_sk_archives')->result();
+        $this->db->select('tb_sk_archives.*, tb_templates.nama_sk');
+        $this->db->from('tb_sk_archives');
+        $this->db->join('tb_templates', 'tb_templates.id = tb_sk_archives.template_id', 'left');
+        $this->db->order_by('tb_sk_archives.id', 'DESC');
+        return $this->db->get()->result();
     }
 
     public function get_archive_by_id($id) {

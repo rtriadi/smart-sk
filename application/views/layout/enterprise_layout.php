@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Vue 3 CDN (must load before view scripts) -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -56,39 +58,54 @@
 
             <?php 
             $ci =& get_instance();
-            $segment = $ci->uri->segment(2); // e.g. sk_editor/archives -> archives
+            $controller = $ci->uri->segment(1); // e.g. sk_editor, templates
+            $segment = $ci->uri->segment(2); // e.g. archives, create
             
             // Helper to determine active class
-            function isActive($current, $target) {
-                // Active State: bg-navy-800 text-white border-r-4 border-teal-500
-                // Inactive State: text-slate-400 hover:bg-navy-800 hover:text-white transition-colors duration-200
-                
+            function isActive($controller, $segment, $targetController, $targetSegment = '') {
                 $activeClass = 'bg-navy-800 text-white border-r-4 border-teal-500';
                 $inactiveClass = 'text-slate-400 hover:bg-navy-800 hover:text-white transition-colors duration-200 border-r-4 border-transparent';
 
-                if ($current == $target) return $activeClass;
-                if ($current == '' && $target == 'dashboard') return $activeClass;
+                if ($controller == $targetController) {
+                    if ($targetSegment === '' && ($segment == '' || $segment == null)) return $activeClass;
+                    if ($segment == $targetSegment) return $activeClass;
+                }
+                
+                // Default dashboard check
+                if ($targetController == 'sk_editor' && $targetSegment == '' && $controller == 'sk_editor' && ($segment == '' || $segment == null)) {
+                    return $activeClass;
+                }
                 
                 return $inactiveClass;
             }
             ?>
 
-            <a href="<?= site_url('sk_editor') ?>" class="group flex items-center px-4 py-3 text-sm font-medium rounded-r-none rounded-l-md transition-all <?= isActive($segment, 'dashboard') ?>">
+            <a href="<?= site_url('sk_editor') ?>" class="group flex items-center px-4 py-3 text-sm font-medium rounded-r-none rounded-l-md transition-all <?= isActive($controller, $segment, 'sk_editor', '') ?>">
                 <i class="fa-solid fa-chart-line w-6 opacity-75 group-hover:opacity-100 transition-opacity"></i>
                 Dashboard
             </a>
 
-            <a href="<?= site_url('sk_editor/create') ?>" class="group flex items-center px-4 py-3 text-sm font-medium rounded-r-none rounded-l-md transition-all <?= isActive($segment, 'create') ?>">
+            <a href="<?= site_url('sk_editor/create') ?>" class="group flex items-center px-4 py-3 text-sm font-medium rounded-r-none rounded-l-md transition-all <?= isActive($controller, $segment, 'sk_editor', 'create') ?>">
                 <i class="fa-solid fa-plus-circle w-6 opacity-75 group-hover:opacity-100 transition-opacity"></i>
-                Create New
+                Buat SK
             </a>
 
-            <a href="<?= site_url('sk_editor/archives') ?>" class="group flex items-center px-4 py-3 text-sm font-medium rounded-r-none rounded-l-md transition-all <?= isActive($segment, 'archives') ?>">
+            <a href="<?= site_url('sk_editor/archives') ?>" class="group flex items-center px-4 py-3 text-sm font-medium rounded-r-none rounded-l-md transition-all <?= isActive($controller, $segment, 'sk_editor', 'archives') ?>">
                 <i class="fa-solid fa-folder-open w-6 opacity-75 group-hover:opacity-100 transition-opacity"></i>
-                Archives
+                Arsip SK
             </a>
 
-            <a href="<?= site_url('sk_editor/settings') ?>" class="group flex items-center px-4 py-3 text-sm font-medium rounded-r-none rounded-l-md transition-all <?= isActive($segment, 'settings') ?>">
+            <!-- Divider -->
+            <div class="border-t border-slate-700/50 my-4"></div>
+            
+            <p class="px-4 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Admin</p>
+
+            <a href="<?= site_url('templates') ?>" class="group flex items-center px-4 py-3 text-sm font-medium rounded-r-none rounded-l-md transition-all <?= ($controller == 'templates') ? 'bg-navy-800 text-white border-r-4 border-teal-500' : 'text-slate-400 hover:bg-navy-800 hover:text-white transition-colors duration-200 border-r-4 border-transparent' ?>">
+                <i class="fa-solid fa-file-lines w-6 opacity-75 group-hover:opacity-100 transition-opacity"></i>
+                Template Manager
+            </a>
+
+            <a href="<?= site_url('sk_editor/settings') ?>" class="group flex items-center px-4 py-3 text-sm font-medium rounded-r-none rounded-l-md transition-all <?= isActive($controller, $segment, 'sk_editor', 'settings') ?>">
                 <i class="fa-solid fa-cog w-6 opacity-75 group-hover:opacity-100 transition-opacity"></i>
                 Settings
             </a>
@@ -96,6 +113,7 @@
         
         <!-- Sidebar Footer (Optional empty space or copyright) -->
         <div class="p-4 text-xs text-slate-500 text-center border-t border-slate-800/50">
+            <p class="mb-1">Developed by <span class="font-semibold text-slate-400">Rahmat Triadi, S.Kom.</span></p>
             &copy; <?= date('Y') ?> Smart SK
         </div>
     </aside>

@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart SK Editor - <?php echo $template->nama_sk; ?></title>
     
-    <!-- Tailwind CSS (CDN) -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -13,37 +13,43 @@
             theme: {
                 extend: {
                     colors: {
-                        slate: {
-                            50: '#f8fafc',
-                            100: '#f1f5f9',
-                            200: '#e2e8f0',
-                            800: '#1e293b',
-                            900: '#0f172a',
+                        primary: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            300: '#5eead4',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
                         }
+                    },
+                    fontFamily: {
+                        'bookman': ['"Bookman Old Style"', 'Georgia', 'serif'],
                     }
                 }
             }
         }
     </script>
+    
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Toastr & jQuery -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <!-- Vue 3 (CDN) -->
+    <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <!-- TinyMCE 5 (CDN) -->
+    <!-- TinyMCE -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/5.10.7/tinymce.min.js" referrerpolicy="origin"></script>
 
     <script>
         <?php
-        // Safely prepare variables with error suppression
         $config = isset($template->form_config) ? @json_decode($template->form_config) : [];
         $config = $config ? $config : []; 
-
         $draftData = isset($draft_data) ? @json_decode($draft_data) : null;
-        
         $draftSettings = isset($draft_settings) ? @json_decode($draft_settings) : null;
         ?>
         
@@ -59,582 +65,624 @@
     </script>
     
     <style>
-        /* Custom Scrollbar for Sidebar */
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-        }
-        .scrollbar-hide {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
 
         /* Custom Fonts */
         @font-face {
             font-family: 'Bookman Old Style';
             src: url('<?php echo base_url('assets/BOOKOS.TTF'); ?>') format('truetype');
             font-weight: normal;
-            font-style: normal;
         }
         @font-face {
             font-family: 'Bookman Old Style';
             src: url('<?php echo base_url('assets/BOOKOSB.TTF'); ?>') format('truetype');
             font-weight: bold;
-            font-style: normal;
         }
 
-        /* A4 Paper Base */
+        /* Paper Preview */
         .paper-preview {
             background: white;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 24px -4px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
             min-height: 297mm;
-            height: auto;
             margin: 0 auto;
-            position: relative;
-            transition: all 0.3s ease;
             font-family: 'Bookman Old Style', serif;
             font-size: 12pt;
             line-height: 1.5;
             color: black;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
         }
 
-        /* Ensure tables don't overflow */
-        .paper-preview table {
-            width: 100%;
-            table-layout: auto; /* Changed from fixed to auto for better column sizing */
-            border-collapse: collapse;
-        }
-        .paper-preview td, .paper-preview th {
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            border: 1px solid #000; /* Force borders */
-            padding: 4px; /* Consistent padding */
-        }
-        /* Except for layout tables (Kop etc) which usually have no border class or specific id */
-        /* But here we target ALL tables in preview. This might affect the Header! */
-        /* We should scope it to .attachment-content type stuff or force no-border on main layout if needed. */
-        /* Wait, the main layout usually uses tables too. */
-        /* Strategy: Only apply borders to tables inside .attachment-content or specifically added ones. */
+        .paper-preview table { width: 100%; border-collapse: collapse; }
+        .paper-preview td, .paper-preview th { word-wrap: break-word; }
         
-        /* Better: Apply general reset, but for user content tables (TinyMCE), they usually come without classes. */
-        /* Let's target .attachment-content table */
-        .attachment-content table {
-             width: 100%;
-             border-collapse: collapse;
-             margin-bottom: 1em;
-        }
-        .attachment-content td, .attachment-content th {
-            border: 1px solid #000;
-            padding: 4px;
-            vertical-align: top;
-        }
-        /* Fix Layout tables which might be in the main content ? */
-        /* If the main content has tables, they might need borders too. */
+        .attachment-content table { width: 100%; border-collapse: collapse; margin-bottom: 1em; }
+        .attachment-content td, .attachment-content th { border: 1px solid #000; padding: 4px; vertical-align: top; }
 
-        /* Fix List Styles */
-        /* List Styles - Robust Fix */
-        .paper-preview ul, .paper-preview ol {
-            margin: 0 0 0.5em 0;
-            padding-left: 2em; /* Use padding for outside markers */
-            list-style-position: outside;
-        }
-
-        .paper-preview li {
-            display: list-item !important; /* Force list-item display */
-            margin-bottom: 0.25em;
-        }
-
-        /* DOTS for UL */
-        .paper-preview ul {
-            list-style-type: disc !important;
-        }
-
-        /* NUMBERS for OL (default) */
-        .paper-preview ol {
-            list-style-type: decimal !important;
-        }
-
-        /* Specific Type Overrides */
-        .paper-preview ol[type="a"], .paper-preview ol.lower-alpha {
-            list-style-type: lower-alpha !important;
-        }
-        .paper-preview ol[type="A"], .paper-preview ol.upper-alpha {
-            list-style-type: upper-alpha !important;
-        }
-        .paper-preview ol[type="i"], .paper-preview ol.lower-roman {
-            list-style-type: lower-roman !important;
-        }
-        .paper-preview ol[type="I"], .paper-preview ol.upper-roman {
-            list-style-type: upper-roman !important;
-        }
-
-        /* Hide Kop Helper */
-        .hide-kop .header-kop {
-            display: none !important;
-        }
+        .paper-preview ul, .paper-preview ol { margin: 0 0 0.5em 0; padding-left: 2em; list-style-position: outside; }
+        .paper-preview li { display: list-item !important; margin-bottom: 0.25em; }
+        .paper-preview ul { list-style-type: disc !important; }
+        .paper-preview ol { list-style-type: decimal !important; }
 
         [v-cloak] { display: none; }
 
-        /* PRINT STYLES */
+        /* Floating Panel */
+        .floating-panel {
+            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+        .dark .floating-panel {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Input Focus Ring */
+        .input-focus {
+            transition: all 0.2s ease;
+        }
+        .input-focus:focus {
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15);
+        }
+
+        /* Smooth Accordion */
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .accordion-content.open {
+            max-height: 2000px;
+        }
+
+        /* Print Styles */
         @media print {
-            @page {
-                margin: 0; 
-            }
-            body {
-                background: white;
-                height: auto;
-                overflow: visible;
-                display: block;
+            @page { margin: 0; }
+            
+            *, *::before, *::after {
+                box-sizing: border-box;
             }
             
-            /* Hide UI Elements by default */
-            #app > div.w-80, /* Sidebar */
-            #app > div.bg-white, /* Toolbar if any */
-            button,
-            a,
-            .no-print {
-                display: none !important;
+            html, body { 
+                background: white !important; 
+                margin: 0 !important; 
+                padding: 0 !important;
+                height: auto !important;
+                width: auto !important;
+                overflow: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
-
-            /* Main Content Reset */
-            #app {
+            
+            #app { 
                 display: block !important; 
                 height: auto !important;
-                overflow: visible !important;
                 width: 100% !important;
-            }
-
-            .flex-1 {
-                margin: 0 !important;
-                padding: 0 !important;
                 overflow: visible !important;
+                flex: none !important;
+            }
+            
+            #app > aside, .no-print, .floating-panel, header, .fixed { 
+                display: none !important; 
+            }
+            
+            #raw-content {
+                display: none !important;
+            }
+            
+            main {
+                display: block !important;
                 height: auto !important;
                 width: 100% !important;
-                background: white !important;
+                overflow: visible !important;
+                flex: none !important;
             }
-
-            /* Paper Preview Reset */
-            .paper-preview {
+            
+            main > div,
+            .flex-1.overflow-auto {
+                display: block !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                height: auto !important;
+                flex: none !important;
+            }
+            
+            #pagination-container {
+                display: block !important;
+                transform: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                gap: 0 !important;
+                flex-direction: column !important;
+            }
+            
+            #pagination-container > * {
+                margin-top: 0 !important;
+                margin-bottom: 0 !important;
+            }
+            
+            .paper-page {
                 box-shadow: none !important;
                 margin: 0 !important;
-                width: 100% !important;
-                min-height: auto !important;
+                page-break-after: always !important;
+                page-break-inside: avoid !important;
+                break-after: page !important;
+                break-inside: avoid !important;
+                overflow: visible !important;
+                display: block !important;
+                position: relative !important;
+            }
+            
+            .paper-page:last-child {
+                page-break-after: auto !important;
+                break-after: auto !important;
+            }
+            
+            .page-content {
+                overflow: visible !important;
+                height: auto !important;
+            }
+            
+            .paper-preview { 
+                box-shadow: none !important; 
+                margin: 0 !important; 
+            }
+            
+            /* Reset Tailwind spacing utilities for print */
+            .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+                margin-top: 0 !important;
             }
         }
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-gray-900 h-screen overflow-hidden text-sm font-sans transition-colors duration-200">
+<body class="bg-slate-100 dark:bg-slate-950 min-h-screen font-sans antialiased">
 
-<div id="app" v-cloak class="flex h-full pt-14 md:pt-0">
+<div id="app" v-cloak class="flex h-screen overflow-hidden">
 
-    <!-- Mobile Header (Visible on small screens) -->
-    <div class="md:hidden fixed top-0 w-full z-20 bg-slate-900 border-b border-slate-800 h-14 flex items-center justify-between px-4 transition-colors duration-200">
-        <div class="flex items-center text-white font-bold text-lg">
-            <button @click="toggleSidebar" class="mr-3 text-slate-300 hover:text-white focus:outline-none">
-                <i class="fas fa-bars text-xl"></i>
-            </button>
-            <i class="fas fa-file-signature text-teal-400 mr-2"></i> Smart Editor
-        </div>
-        <div>
-             <!-- Theme Toggle (Mobile) -->
-             <button @click="toggleTheme" class="text-slate-400 hover:text-white transition" title="Toggle Theme">
-                <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
-            </button>
-        </div>
-    </div>
-
-    <!-- Mobile Sidebar Overlay -->
-    <div v-show="isSidebarOpen" @click="toggleSidebar" class="fixed inset-0 bg-black/50 z-20 md:hidden glass-effect transition-opacity"></div>
-
-
-    <!-- Sidebar (Left) -->
-    <div :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-30 w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col shadow-lg transform transition-transform duration-300 md:translate-x-0 md:static md:inset-auto ease-in-out">
-        <!-- Header -->
-        <div class="h-14 bg-slate-900 border-b border-slate-800 flex items-center px-4 justify-between transition-colors duration-200 shrink-0">
-            <div class="flex items-center text-white font-bold text-lg">
-                <i class="fas fa-file-signature text-teal-400 mr-2"></i> Smart Editor
+    <!-- Sidebar -->
+    <aside :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'" 
+           class="fixed lg:static inset-y-0 left-0 z-50 w-[380px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transform transition-transform duration-300 ease-out">
+        
+        <!-- Sidebar Header -->
+        <div class="h-16 px-5 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-primary-600 to-primary-500">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center">
+                    <i class="fas fa-file-signature text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-white font-bold text-base">Smart SK Editor</h1>
+                    <p class="text-primary-100 text-[11px] truncate max-w-[180px]"><?php echo $template->nama_sk; ?></p>
+                </div>
             </div>
-            <div class="flex items-center space-x-3">
-                <!-- Theme Toggle -->
-                <button @click="toggleTheme" class="text-slate-400 hover:text-white transition" title="Toggle Theme">
+            <div class="flex items-center gap-2">
+                <button @click="toggleTheme" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
                     <i class="fas" :class="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
                 </button>
-                <a href="<?php echo site_url('sk_editor'); ?>" class="flex items-center text-slate-300 hover:text-white transition text-xs font-medium group" title="Back to Dashboard">
-                    <i class="fas fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i> <span>Back to Dashboard</span>
+                <a href="<?php echo site_url('sk_editor'); ?>" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition" title="Kembali">
+                    <i class="fas fa-arrow-left"></i>
                 </a>
             </div>
         </div>
 
-        <!-- Scrollable Content -->
-        <div class="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide">
+        <!-- Sidebar Tabs -->
+        <div class="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+            <button @click="activeTab = 'form'" 
+                    :class="activeTab === 'form' ? 'text-primary-600 border-primary-500 bg-white dark:bg-slate-800' : 'text-slate-500 border-transparent hover:text-slate-700 dark:hover:text-slate-300'"
+                    class="flex-1 px-4 py-3 text-sm font-semibold border-b-2 transition-all flex items-center justify-center gap-2">
+                <i class="fas fa-edit"></i> Isi Data
+            </button>
+            <button @click="activeTab = 'settings'" 
+                    :class="activeTab === 'settings' ? 'text-primary-600 border-primary-500 bg-white dark:bg-slate-800' : 'text-slate-500 border-transparent hover:text-slate-700 dark:hover:text-slate-300'"
+                    class="flex-1 px-4 py-3 text-sm font-semibold border-b-2 transition-all flex items-center justify-center gap-2">
+                <i class="fas fa-cog"></i> Pengaturan
+            </button>
+        </div>
+
+        <!-- Sidebar Content -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar">
             
-            <!-- Global Settings -->
-            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600 transition-colors duration-200">
-                <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center">
-                    <i class="fas fa-cog mr-2"></i> Global Settings
-                </h3>
+            <!-- Form Tab -->
+            <div v-show="activeTab === 'form'" class="p-4 space-y-3">
                 
-                <div class="grid grid-cols-2 gap-3 mb-3">
-                    <div>
-                        <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1 font-medium">Paper Size</label>
-                        <select v-model="globalSettings.paperSize" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors">
-                            <option value="A4">A4</option>
-                            <option value="F4">F4</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1 font-medium">Orientation</label>
-                        <select v-model="globalSettings.orientation" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors">
-                            <option value="portrait">Portrait</option>
-                            <option value="landscape">Landscape</option>
-                        </select>
+                <!-- Dynamic Data Section (From Template Variables) -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+                    <button @click="toggleDataSection" 
+                            class="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="w-7 h-7 rounded-full bg-primary-500 text-white text-xs font-bold flex items-center justify-center">
+                                <i class="fas fa-file-alt"></i>
+                            </span>
+                            <span class="font-semibold text-slate-700 dark:text-slate-200 text-sm">Data SK</span>
+                            <span class="text-xs text-slate-400">({{ templateVariables.length }} field)</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-slate-400 transition-transform duration-200" :class="{'rotate-180': isDataSectionOpen}"></i>
+                    </button>
+                    
+                    <div v-show="isDataSectionOpen" class="px-4 pb-4 space-y-4 border-t border-slate-200 dark:border-slate-700 pt-4">
+                        <!-- Empty State -->
+                        <div v-if="templateVariables.length === 0" class="text-center py-6 text-slate-400">
+                            <i class="fas fa-inbox text-3xl mb-2"></i>
+                            <p class="text-sm">Tidak ada variabel dalam template ini</p>
+                        </div>
+                        
+                        <!-- Dynamic Fields -->
+                        <div v-for="(field, index) in templateVariables" :key="field.variable">
+                            
+                            <!-- Label -->
+                            <label v-if="field.type !== 'checkbox'" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wide">
+                                {{ field.label }}
+                            </label>
+                            
+                            <!-- Text/Textarea -->
+                            <textarea v-if="['text', 'textarea'].includes(field.type)" 
+                                      v-model="formData[field.variable]" 
+                                      rows="2"
+                                      :placeholder="'Masukkan ' + field.label"
+                                      class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition input-focus resize-none"></textarea>
+
+                            <!-- Number -->
+                            <input v-if="field.type === 'number'" 
+                                   type="number" 
+                                   v-model="formData[field.variable]"
+                                   :placeholder="'Masukkan ' + field.label"
+                                   class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition input-focus">
+                            
+                            <!-- Date -->
+                            <input v-if="field.type === 'date'" 
+                                   type="date" 
+                                   v-model="formData[field.variable]"
+                                   class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition input-focus">
+                                
+                            <!-- Checkbox -->
+                            <label v-if="field.type === 'checkbox'" class="flex items-center gap-3 cursor-pointer group">
+                                <div class="relative">
+                                    <input type="checkbox" v-model="formData[field.variable]" class="sr-only peer">
+                                    <div class="w-5 h-5 border-2 border-slate-300 dark:border-slate-600 rounded peer-checked:bg-primary-500 peer-checked:border-primary-500 transition-colors"></div>
+                                    <i class="fas fa-check absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white text-[10px] opacity-0 peer-checked:opacity-100 transition-opacity"></i>
+                                </div>
+                                <span class="text-sm text-slate-700 dark:text-slate-300 group-hover:text-primary-600 transition-colors">{{ field.label }}</span>
+                            </label>
+
+                            <!-- Image Upload -->
+                            <div v-if="field.type === 'image'" class="space-y-2">
+                                <label class="flex items-center justify-center w-full h-24 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                                    <input type="file" @change="handleGenericImageUpload($event, field.variable, field.variable + '_width', 70)" accept="image/*" class="hidden">
+                                    <div class="text-center">
+                                        <i class="fas fa-cloud-upload-alt text-2xl text-slate-400 mb-1"></i>
+                                        <p class="text-xs text-slate-500">Klik untuk upload</p>
+                                    </div>
+                                </label>
+                                <div v-if="formData[field.variable]" class="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border">
+                                    <img :src="formData[field.variable]" class="max-h-16 mx-auto object-contain mb-2">
+                                    <input type="range" v-model="formData[field.variable + '_width']" min="20" max="300" class="w-full">
+                                    <button @click="formData[field.variable] = null" class="text-xs text-red-500 hover:underline mt-1">Hapus</button>
+                                </div>
+                            </div>
+
+                            <!-- Repeater -->
+                            <div v-if="field.type === 'repeater'" class="space-y-2">
+                                <div v-for="(item, rIndex) in formData[field.variable]" :key="rIndex" class="flex gap-2 items-start group">
+                                    <span class="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 text-xs flex items-center justify-center shrink-0 mt-2">{{ rIndex + 1 }}</span>
+                                    <textarea v-model="formData[field.variable][rIndex]" rows="2"
+                                              class="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none resize-none"></textarea>
+                                    <button @click="removeRepeaterItem(field.variable, rIndex)" class="w-8 h-8 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition opacity-0 group-hover:opacity-100 mt-1">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <button @click="addRepeaterItem(field.variable)" class="w-full py-2 border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-500 rounded-lg hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors text-sm font-medium">
+                                    <i class="fas fa-plus mr-1"></i> Tambah Baris
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1 font-medium">Margins (mm)</label>
+                <!-- Mandatory Settings Section (Always Present) -->
+                <div class="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl overflow-hidden border border-amber-200 dark:border-amber-800">
+                    <button @click="toggleMandatorySection" 
+                            class="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-amber-100/50 dark:hover:bg-amber-800/20 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="w-7 h-7 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center">
+                                <i class="fas fa-cogs"></i>
+                            </span>
+                            <span class="font-semibold text-amber-800 dark:text-amber-200 text-sm">Pengaturan Wajib</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-amber-500 transition-transform duration-200" :class="{'rotate-180': isMandatorySectionOpen}"></i>
+                    </button>
+                    
+                    <div v-show="isMandatorySectionOpen" class="px-4 pb-4 space-y-4 border-t border-amber-200 dark:border-amber-700 pt-4">
+                        
+                        <!-- Jumlah Salinan -->
+                        <div>
+                            <label class="block text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1.5 uppercase tracking-wide">
+                                <i class="fas fa-copy mr-1"></i> Jumlah Salinan
+                            </label>
+                            <input type="number" 
+                                   v-model="mandatorySettings.jumlah_salinan" 
+                                   min="1" max="100"
+                                   class="w-full bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2.5 text-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition">
+                        </div>
+
+                        <!-- Nomor Urut -->
+                        <div>
+                            <label class="block text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1.5 uppercase tracking-wide">
+                                <i class="fas fa-sort-numeric-up mr-1"></i> Nomor Urut SK
+                            </label>
+                            <input type="number" 
+                                   v-model="mandatorySettings.nomor_urut" 
+                                   min="1"
+                                   class="w-full bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2.5 text-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition">
+                        </div>
+
+                        <!-- Toggle Switches -->
+                        <div class="space-y-3 pt-2">
+                            <!-- Tampilkan Hijriah -->
+                            <label class="flex items-center justify-between cursor-pointer group p-2 rounded-lg hover:bg-amber-100/50 dark:hover:bg-amber-800/20 transition">
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-moon text-amber-600 dark:text-amber-400 w-5 text-center"></i>
+                                    <span class="text-sm text-amber-800 dark:text-amber-200 font-medium">Tampilkan Tanggal Hijriah</span>
+                                </div>
+                                <div class="relative">
+                                    <input type="checkbox" v-model="mandatorySettings.tampilkan_hijriah" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-300 dark:bg-slate-600 rounded-full peer-checked:bg-amber-500 transition-colors"></div>
+                                    <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
+                                </div>
+                            </label>
+
+                            <!-- Tampilkan NIP -->
+                            <label class="flex items-center justify-between cursor-pointer group p-2 rounded-lg hover:bg-amber-100/50 dark:hover:bg-amber-800/20 transition">
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-id-card text-amber-600 dark:text-amber-400 w-5 text-center"></i>
+                                    <span class="text-sm text-amber-800 dark:text-amber-200 font-medium">Tampilkan NIP</span>
+                                </div>
+                                <div class="relative">
+                                    <input type="checkbox" v-model="mandatorySettings.tampilkan_nip" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-300 dark:bg-slate-600 rounded-full peer-checked:bg-amber-500 transition-colors"></div>
+                                    <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div v-show="activeTab === 'settings'" class="p-4 space-y-4">
+                
+                <!-- Paper Settings -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                    <h3 class="font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+                        <i class="fas fa-file-alt text-primary-500"></i> Ukuran Kertas
+                    </h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Ukuran</label>
+                            <select v-model="globalSettings.paperSize" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none">
+                                <option value="A4">A4</option>
+                                <option value="F4">F4 / Folio</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Orientasi</label>
+                            <select v-model="globalSettings.orientation" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none">
+                                <option value="portrait">Portrait</option>
+                                <option value="landscape">Landscape</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Margins -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                    <h3 class="font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+                        <i class="fas fa-expand-arrows-alt text-primary-500"></i> Margin (mm)
+                    </h3>
                     <div class="grid grid-cols-4 gap-2">
-                        <input type="number" v-model="globalSettings.marginTop" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-1 py-1.5 text-center text-xs focus:border-indigo-500 focus:ring-indigo-500 outline-none" placeholder="T">
-                        <input type="number" v-model="globalSettings.marginBottom" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-1 py-1.5 text-center text-xs focus:border-indigo-500 focus:ring-indigo-500 outline-none" placeholder="B">
-                        <input type="number" v-model="globalSettings.marginLeft" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-1 py-1.5 text-center text-xs focus:border-indigo-500 focus:ring-indigo-500 outline-none" placeholder="L">
-                        <input type="number" v-model="globalSettings.marginRight" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-1 py-1.5 text-center text-xs focus:border-indigo-500 focus:ring-indigo-500 outline-none" placeholder="R">
+                        <div class="text-center">
+                            <label class="block text-[10px] text-slate-400 dark:text-slate-500 mb-1">Atas</label>
+                            <input type="number" v-model="globalSettings.marginTop" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-2 py-2 text-sm text-center focus:border-primary-500 outline-none">
+                        </div>
+                        <div class="text-center">
+                            <label class="block text-[10px] text-slate-400 dark:text-slate-500 mb-1">Bawah</label>
+                            <input type="number" v-model="globalSettings.marginBottom" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-2 py-2 text-sm text-center focus:border-primary-500 outline-none">
+                        </div>
+                        <div class="text-center">
+                            <label class="block text-[10px] text-slate-400 dark:text-slate-500 mb-1">Kiri</label>
+                            <input type="number" v-model="globalSettings.marginLeft" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-2 py-2 text-sm text-center focus:border-primary-500 outline-none">
+                        </div>
+                        <div class="text-center">
+                            <label class="block text-[10px] text-slate-400 dark:text-slate-500 mb-1">Kanan</label>
+                            <input type="number" v-model="globalSettings.marginRight" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-2 py-2 text-sm text-center focus:border-primary-500 outline-none">
+                        </div>
                     </div>
                 </div>
 
                 <!-- Typography -->
-                <div class="grid grid-cols-2 gap-3 mb-3">
-                    <div>
-                        <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1 font-medium">Font Size</label>
-                        <select v-model="globalSettings.fontSize" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none">
-                            <option value="10pt">10pt</option>
-                            <option value="11pt">11pt</option>
-                            <option value="12pt">12pt</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1 font-medium">Line Spacing</label>
-                        <select v-model="globalSettings.lineHeight" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none">
-                            <option value="1.0">1.0</option>
-                            <option value="1.15">1.15</option>
-                            <option value="1.5">1.5</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-gray-600 dark:text-gray-400 text-xs font-medium">Show Letterhead</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" v-model="globalSettings.showKop" class="sr-only peer">
-                        <div class="w-9 h-5 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 dark:peer-checked:bg-blue-600"></div>
-                    </label>
-                </div>
-
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-gray-600 dark:text-gray-400 text-xs font-medium">Show Page Numbers</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" v-model="globalSettings.showPageNumbers" class="sr-only peer">
-                        <div class="w-9 h-5 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 dark:peer-checked:bg-blue-600"></div>
-                    </label>
-                </div>
-
-                <!-- Kop Settings -->
-                <div v-if="globalSettings.showKop" class="space-y-2 border-t border-gray-200 dark:border-gray-600 pt-3">
-                    <div class="mb-2">
-                        <label class="block text-gray-600 dark:text-gray-400 text-xs mb-1">SK/Draft Logo (Optional Override)</label>
-                        <input type="file" @change="handleLogoUpload" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:text-gray-400 dark:file:bg-blue-900 dark:file:text-blue-200">
-                        
-                        <!-- Logo Preview & Sizing -->
-                        <div v-if="formData.skLogo || globalSettings.kopLogo" class="mt-2 bg-gray-100 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
-                            <div class="flex justify-center mb-2">
-                                <img :src="formData.skLogo || globalSettings.kopLogo" class="max-h-20 object-contain border border-gray-300 bg-white">
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <label class="text-xs text-gray-500">Width:</label>
-                                <!-- If skLogo is present, model custom width. Else if forcing override? 
-                                     Actually, handleLogoUpload initializes skLogoWidth from kopLogoWidth.
-                                     So we can safely bind to skLogoWidth IF skLogo is present?
-                                     Or simply bind to skLogoWidth ALWAYS, and ensure it defaults to kopLogoWidth?
-                                     Let's bind to formData.skLogoWidth (which we init in Vue if missing) -->
-                                <input type="range" v-model="formData.skLogoWidth" min="40" max="250" class="w-full h-1 bg-gray-300 rounded-lg appearance-none cursor-pointer">
-                                <input type="number" v-model="formData.skLogoWidth" class="w-12 text-xs text-center border rounded dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div v-if="formData.skLogo" class="text-center mt-1">
-                                <button @click="formData.skLogo = null; formData.skLogoWidth = null" class="text-xs text-red-500 hover:underline">Reset to Global</button>
-                            </div>
-                        </div>
-                    </div>
-                    <input type="text" v-model="globalSettings.kopTitle1" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-500" placeholder="Line 1">
-                    <input type="text" v-model="globalSettings.kopTitle2" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-500" placeholder="Line 2">
-                    <input type="text" v-model="globalSettings.kopTitle3" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-500" placeholder="Line 3">
-                    <input type="text" v-model="globalSettings.kopTitle4" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-500" placeholder="Line 4">
-                    <textarea v-model="globalSettings.kopAddress" rows="3" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-indigo-500" placeholder="Address"></textarea>
-                </div>
-
-                <!-- Attachments (Lampiran) -->
-                <div class="mt-4 border-t border-gray-200 dark:border-gray-600 pt-4">
-                    <div class="flex items-center justify-between mb-2">
-                        <label class="block text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wider">Lampiran</label>
-                        <button @click="addAttachment" class="text-xs bg-indigo-50 dark:bg-blue-900 text-indigo-600 dark:text-blue-300 px-2 py-1 rounded hover:bg-indigo-100 dark:hover:bg-blue-800 transition-colors">+ Add</button>
-                    </div>
-                    
-                    <div v-if="formData.attachments && formData.attachments.length > 0" class="space-y-3">
-                        <div v-for="(att, index) in formData.attachments" :key="index" class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700 relative">
-                             <div class="flex justify-between items-center mb-1">
-                                <span class="text-[10px] text-gray-500 font-bold">LAMPIRAN #{{ index + 1 }}</span>
-                                <button @click="removeAttachment(index)" class="text-red-500 hover:text-red-700 text-xs">x</button>
-                             </div>
-                             <input type="text" v-model="att.title" class="w-full mb-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-xs px-2 py-1 text-gray-900 dark:text-gray-100" placeholder="Judul Lampiran (e.g. Daftar Pegawai)">
-                             
-                             <!-- TinyMCE Target -->
-                             <textarea :id="'attachment-editor-' + index" class="tinymce-editor w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-xs px-2 py-1 h-40"></textarea>
-                             
-                             <div class="text-[10px] text-gray-400 italic mt-1">Gunakan toolbar di atas untuk membuat tabel/list.</div>
-                        </div>
-                    </div>
-                    <div v-else class="text-center py-4 bg-gray-50 dark:bg-gray-800 rounded border border-dashed border-gray-300 dark:border-gray-600">
-                        <span class="text-xs text-gray-400">Tidak ada lampiran</span>
-                    </div>
-                </div>
-
-                <!-- Save Defaults Button -->
-                <div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
-                    <button @click="saveAsDefault" class="w-full text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 py-1.5 rounded transition flex items-center justify-center" title="Save current margins, paper size, and typography as your default for new documents">
-                        <i class="fas fa-save mr-2"></i> Save Settings as Default
-                    </button>
-                </div>
-            </div>
-
-                <!-- Page Appearance Settings (New) -->
-                <div>
-                    <h3 class="text-xs font-bold text-indigo-600 dark:text-blue-400 uppercase tracking-wider mb-3 border-b border-gray-200 dark:border-gray-700 pb-1 flex items-center">
-                        <span class="mr-2 px-2 py-0.5 bg-indigo-50 dark:bg-blue-900/30 rounded text-indigo-700 dark:text-blue-300"><i class="fas fa-cog"></i></span> TAMPILAN HALAMAN
+                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                    <h3 class="font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+                        <i class="fas fa-text-height text-primary-500"></i> Tipografi
                     </h3>
-                    
-                    <div class="space-y-4 mb-6 px-1">
-                        <!-- Show Kop Toggle -->
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Tampilkan Kop Surat</label>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" v-model="globalSettings.showKop" class="sr-only peer">
-                                <div class="w-9 h-5 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
-                            </label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Ukuran Font</label>
+                            <select v-model="globalSettings.fontSize" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none">
+                                <option value="10pt">10pt</option>
+                                <option value="11pt">11pt</option>
+                                <option value="12pt">12pt</option>
+                            </select>
                         </div>
-                        
-
-
-                        <!-- Logo Tengah SK -->
-                        <div class="space-y-2 pt-2 border-t border-dashed border-gray-200 dark:border-gray-700">
-                            <label class="text-xs font-medium text-gray-700 dark:text-gray-300">Logo Tengah SK</label>
-                            
-                            <!-- Upload Logo Tengah -->
-                            <input type="file" @change="handleContentLogoUpload" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 dark:text-gray-400 dark:file:bg-green-900 dark:file:text-green-200">
-                            
-                            <!-- Logo Preview & Sizing -->
-                            <div v-if="formData.logo_tengah || formData.skContentLogo" class="bg-gray-100 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
-                                <div class="flex justify-center mb-2">
-                                    <img :src="formData.logo_tengah || formData.skContentLogo" class="max-h-20 object-contain border border-gray-300 bg-white">
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    <label class="text-xs text-gray-500">Ukuran:</label>
-                                    <input type="range" v-model="formData.logo_tengah_width" min="40" max="300" class="w-full h-1 bg-gray-300 rounded-lg appearance-none cursor-pointer">
-                                    <input type="number" v-model="formData.logo_tengah_width" class="w-12 text-xs text-center border rounded dark:bg-gray-700 dark:text-white">
-                                </div>
-                                <div class="text-center mt-1">
-                                    <span class="text-xs text-gray-500">{{ formData.logo_tengah_width || 100 }}px</span>
-                                </div>
-                                <div class="text-center mt-1">
-                                    <button @click="formData.logo_tengah = null; formData.skContentLogo = null; formData.logo_tengah_width = null" class="text-xs text-red-500 hover:underline">Hapus Logo</button>
-                                </div>
-                            </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Spasi Baris</label>
+                            <select v-model="globalSettings.lineHeight" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none">
+                                <option value="1.0">1.0</option>
+                                <option value="1.15">1.15</option>
+                                <option value="1.5">1.5</option>
+                            </select>
                         </div>
-
-
                     </div>
                 </div>
 
-                <!-- Dynamic Form -->
-                <!-- Dynamic Form (Accordion) -->
-                <div v-for="(section, sIndex) in config" :key="sIndex" class="transition-colors duration-200">
-                    <button @click="toggleSection(sIndex)" class="w-full text-left text-xs font-bold text-indigo-600 dark:text-blue-400 uppercase tracking-wider mb-2 border-b border-gray-200 dark:border-gray-700 pb-2 flex items-center justify-between outline-none hover:bg-slate-50 dark:hover:bg-gray-800/50 rounded px-1 transition-colors">
-                        <div class="flex items-center">
-                             <span class="mr-2 px-2 py-0.5 bg-indigo-50 dark:bg-blue-900/30 rounded text-indigo-700 dark:text-blue-300">{{sIndex + 1}}</span> {{ section.section }}
+                <!-- Page Numbers Toggle -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                    <label class="flex items-center justify-between cursor-pointer">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-list-ol text-primary-500"></i>
+                            <span class="font-semibold text-slate-700 dark:text-slate-200">Nomor Halaman</span>
                         </div>
-                        <i class="fas fa-chevron-down transition-transform duration-200" :class="{'rotate-180': activeSections.includes(sIndex)}"></i>
-                    </button>
-
-
-                    <div class="space-y-4 mb-6" v-if="section && section.fields" v-show="activeSections.includes(sIndex)">
-                    <div v-for="(field, fIndex) in section.fields" :key="fIndex" v-show="field.type !== 'hidden'">
-                        <label v-if="field.type !== 'checkbox'" class="block text-gray-600 dark:text-gray-300 text-xs mb-1 font-medium">{{ field.label }}</label>
-                        
-                        <!-- Text/Textarea/Number -->
-                        <textarea v-if="['text', 'textarea'].includes(field.type)" v-model="formData[field.variable]" rows="2"
-                            :readonly="['nama_penandatangan', 'jabatan_penandatangan', 'nip_penandatangan'].includes(field.variable)"
-                            :class="{'bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-500': ['nama_penandatangan', 'jabatan_penandatangan', 'nip_penandatangan'].includes(field.variable)}"
-                            class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition shadow-sm"></textarea>
-
-                        <input v-if="field.type === 'number'" type="number" v-model="formData[field.variable]"
-                             :readonly="['nama_penandatangan', 'jabatan_penandatangan', 'nip_penandatangan'].includes(field.variable)"
-                             :class="{'bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-500': ['nama_penandatangan', 'jabatan_penandatangan', 'nip_penandatangan'].includes(field.variable)}"
-                             class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition shadow-sm">
-                        
-                        <input v-if="field.type === 'date'" type="date" v-model="formData[field.variable]"
-                            class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition shadow-sm">
-                            
-                        <!-- Select -->
-                        <select v-if="field.type === 'select'" v-model="formData[field.variable]"
-                            class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:border-indigo-500 dark:focus:border-blue-500 focus:ring-1 focus:ring-indigo-500 outline-none transition shadow-sm">
-                            <option v-for="opt in field.options" :value="opt">{{ opt }}</option>
-                        </select>
-
-                        <!-- Auto-Selected Pejabat (Read-only) -->
-                        <div v-if="field.type === 'select_pejabat'">
-                            <input type="text" :value="formData.nama_penandatangan ? formData.nama_penandatangan + ' (' + (formData.jabatan_penandatangan_select || formData.jabatan_penandatangan) + ')' : 'Memuat pejabat default...'" readonly 
-                                class="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded px-3 py-2 text-sm cursor-not-allowed focus:outline-none">
-                            <p class="text-[10px] text-gray-400 mt-1 italic">*Otomatis diambil dari Master Pejabat (Default)</p>
+                        <div class="relative">
+                            <input type="checkbox" v-model="globalSettings.showPageNumbers" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-300 dark:bg-slate-600 rounded-full peer-checked:bg-primary-500 transition-colors"></div>
+                            <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
                         </div>
+                    </label>
+                </div>
 
-                        <!-- Select Jabatan (Master - Readonly) -->
-                        <div v-if="field.type === 'select_jabatan'">
-                            <input type="text" v-model="formData[field.variable]" readonly 
-                                class="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded px-3 py-2 text-sm cursor-not-allowed focus:outline-none">
-                            <p class="text-[10px] text-gray-400 mt-1 italic">*Diatur dari Master Pejabat (Default)</p>
+                <!-- Logo Tengah -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                    <h3 class="font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+                        <i class="fas fa-image text-primary-500"></i> Logo Tengah SK
+                    </h3>
+                    <label class="flex items-center justify-center w-full h-24 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                        <input type="file" @change="handleContentLogoUpload" accept="image/*" class="hidden">
+                        <div class="text-center">
+                            <i class="fas fa-cloud-upload-alt text-2xl text-slate-400 mb-1"></i>
+                            <p class="text-xs text-slate-500">Upload Logo</p>
                         </div>
-
-                        <!-- Image Upload (New) -->
-                        <div v-if="field.type === 'image'">
-                            <input type="file" @change="handleGenericImageUpload($event, field.variable, field.width_variable, field.default_width)" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 dark:text-gray-400 dark:file:bg-amber-900 dark:file:text-amber-200">
-                            
-                            <div v-if="formData[field.variable]" class="mt-2 bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-600">
-                                <div class="flex justify-center mb-2">
-                                    <img :src="formData[field.variable]" class="object-contain" :style="{width: (formData[field.width_variable] || field.default_width || 100) + 'px'}">
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    <label class="text-xs text-gray-500">Width:</label>
-                                    <input type="range" v-model="formData[field.width_variable]" min="20" max="300" class="w-full h-1 bg-gray-300 rounded-lg appearance-none cursor-pointer">
-                                    <input type="number" v-model="formData[field.width_variable]" class="w-12 text-xs text-center border rounded dark:bg-gray-700 dark:text-white">
-                                </div>
-                                <div class="text-center mt-1">
-                                    <button @click="formData[field.variable] = null" class="text-xs text-red-500 hover:underline">Remove</button>
-                                </div>
-                            </div>
+                    </label>
+                    <div v-if="formData.logo_tengah || formData.skContentLogo" class="mt-3 p-3 bg-white dark:bg-slate-800 rounded-lg border">
+                        <img :src="formData.logo_tengah || formData.skContentLogo" class="max-h-16 mx-auto object-contain mb-2">
+                        <div class="flex items-center gap-2">
+                            <input type="range" v-model="formData.logo_tengah_width" min="40" max="300" class="flex-1">
+                            <span class="text-xs text-slate-500 w-12 text-right">{{ formData.logo_tengah_width || 100 }}px</span>
                         </div>
+                        <button @click="formData.logo_tengah = null; formData.skContentLogo = null" class="text-xs text-red-500 hover:underline mt-2 block mx-auto">Hapus Logo</button>
+                    </div>
+                </div>
 
-                        <!-- Checkbox -->
-                        <div v-if="field.type === 'checkbox'" class="flex items-center mt-2">
-                            <input type="checkbox" v-model="formData[field.variable]" :id="'cb-'+fIndex+'-'+sIndex" 
-                                class="w-4 h-4 text-indigo-600 bg-white border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                            <label :for="'cb-'+fIndex+'-'+sIndex" class="ml-2 text-sm font-medium text-slate-700 dark:text-gray-300">{{ field.label }}</label>
-                        </div>
-
-                        <!-- Repeater -->
-                        <div v-if="field.type === 'repeater'" class="space-y-2">
-                            <div v-for="(item, rIndex) in formData[field.variable]" :key="rIndex" class="flex gap-2 items-start">
-                                <span class="text-xs text-gray-400 mt-2 w-4 text-right">{{rIndex+1}}.</span>
-                                <textarea v-model="formData[field.variable][rIndex]" rows="2"
-                                    class="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:border-indigo-500 dark:focus:border-blue-500 outline-none shadow-sm"></textarea>
-                                <button @click="removeRepeaterItem(field.variable, rIndex)" class="text-red-400 hover:text-red-600 p-1 mt-1 transition">
-                                    <i class="fas fa-times"></i>
+                <!-- Attachments -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                            <i class="fas fa-paperclip text-primary-500"></i> Lampiran
+                        </h3>
+                        <button @click="addAttachment" class="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-xs font-medium transition">
+                            <i class="fas fa-plus mr-1"></i> Tambah
+                        </button>
+                    </div>
+                    <div v-if="formData.attachments && formData.attachments.length > 0" class="space-y-3">
+                        <div v-for="(att, index) in formData.attachments" :key="index" class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] font-bold text-primary-500 uppercase">Lampiran {{ index + 1 }}</span>
+                                <button @click="removeAttachment(index)" class="text-red-400 hover:text-red-600 text-sm">
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </div>
-                            <button @click="addRepeaterItem(field.variable)" class="w-full py-1.5 border border-dashed border-indigo-300 dark:border-gray-600 text-indigo-600 dark:text-blue-400 rounded hover:bg-indigo-50 dark:hover:bg-gray-700 hover:border-indigo-400 transition text-xs uppercase font-bold bg-white dark:bg-transparent shadow-sm">
-                                <i class="fas fa-plus mr-1"></i> Add Row
-                            </button>
+                            <input type="text" v-model="att.title" class="w-full mb-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500" placeholder="Judul Lampiran">
+                            <textarea :id="'attachment-editor-' + index" class="tinymce-editor w-full h-32"></textarea>
                         </div>
                     </div>
+                    <div v-else class="text-center py-8 text-slate-400">
+                        <i class="fas fa-inbox text-3xl mb-2"></i>
+                        <p class="text-sm">Belum ada lampiran</p>
+                    </div>
+                </div>
+
+                <!-- Save Defaults -->
+                <button @click="saveAsDefault" class="w-full py-3 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-medium transition flex items-center justify-center gap-2">
+                    <i class="fas fa-save"></i> Simpan Sebagai Default
+                </button>
+            </div>
+        </div>
+
+        <!-- Sidebar Footer Actions -->
+        <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+            <div class="grid grid-cols-2 gap-2 mb-2">
+                <button @click="saveDraft" :disabled="isSaving" 
+                        class="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 shadow-lg shadow-primary-500/25">
+                    <i class="fas" :class="isSaving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+                    {{ isSaving ? 'Menyimpan...' : 'Simpan' }}
+                </button>
+                <button @click="printPdf" class="bg-slate-700 hover:bg-slate-800 text-white py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2">
+                    <i class="fas fa-print"></i> Print
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <button @click="exportWord" class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 py-2.5 rounded-xl font-medium transition flex items-center justify-center gap-2">
+                    <i class="fas fa-file-word text-blue-500"></i> Word
+                </button>
+                <button @click="exportPdf" class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 py-2.5 rounded-xl font-medium transition flex items-center justify-center gap-2">
+                    <i class="fas fa-file-pdf text-red-500"></i> PDF
+                </button>
+            </div>
+            <p class="text-center text-[10px] text-slate-400 mt-3">
+                Smart SK Editor v2.1 &copy; <?php echo date('Y'); ?>
+            </p>
+        </div>
+    </aside>
+
+    <!-- Mobile Overlay -->
+    <div v-show="isSidebarOpen" @click="toggleSidebar" class="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"></div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-200/50 dark:bg-slate-950">
+        
+        <!-- Top Bar -->
+        <header class="h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 lg:px-6 shrink-0">
+            <div class="flex items-center gap-4">
+                <button @click="toggleSidebar" class="lg:hidden w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h2 class="font-bold text-slate-800 dark:text-white text-sm lg:text-base"><?php echo $template->nama_sk; ?></h2>
+                    <p class="text-xs text-slate-500">Template ID: <?php echo $template->id; ?></p>
                 </div>
             </div>
-        </div>
-
-        <!-- Footer Actions -->
-        <div class="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 grid grid-cols-2 gap-3 transition-colors duration-200">
-            <button @click="saveDraft" :disabled="isSaving" class="bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 rounded shadow-md font-semibold transition flex items-center justify-center">
-                <i class="fas" :class="isSaving ? 'fa-spinner fa-spin' : 'fa-save'"></i> <span class="ml-2">{{ isSaving ? 'Saving...' : 'Save' }}</span>
-            </button>
-            <button @click="printPdf" class="bg-slate-700 hover:bg-slate-800 text-white py-2 rounded shadow-md font-semibold transition flex items-center justify-center">
-                <i class="fas fa-print mr-2"></i> Print
-            </button>
-            <button @click="exportWord" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 py-2 rounded shadow-sm font-semibold transition flex items-center justify-center">
-                <i class="fas fa-file-word mr-2 text-blue-600"></i> Word
-            </button>
-            <button @click="exportPdf" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 py-2 rounded shadow-sm font-semibold transition flex items-center justify-center">
-                <i class="fas fa-file-pdf mr-2 text-red-600"></i> PDF
-            </button>
-            <!-- Developer Footer -->
-            <div class="col-span-2 text-center pt-2">
-                <p class="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
-                    Developed by Rahmat Triadi, S.Kom. &copy; <?php echo date('Y'); ?>
-                </p>
-            </div>
-            <!-- Hidden button for ID storage hack -->
-            <div id="btn-print-hidden" data-id="" style="display:none;"></div>
-        </div>
-    </div>
-
-    <!-- Main Content (Preview) -->
-    <div class="flex-1 bg-slate-200/50 dark:bg-gray-900 overflow-auto p-8 relative transition-colors duration-200">
-        
-        <!-- Zoom Controls (Floating) -->
-        <div class="fixed bottom-20 right-8 z-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col p-1.5 space-y-1 no-print">
-            <button @click="zoomIn" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition" title="Zoom In">
-                <i class="fas fa-plus"></i>
-            </button>
-            <div class="text-[10px] font-bold text-center text-gray-500 py-1 cursor-default">{{ Math.round(zoomScale * 100) }}%</div>
-            <button @click="zoomOut" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition" title="Zoom Out">
-                <i class="fas fa-minus"></i>
-            </button>
-             <button @click="resetZoom" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition border-t border-gray-100 dark:border-gray-700 mt-1" title="Reset Zoom">
-                <i class="fas fa-expand"></i>
-            </button>
-        </div>
-
-        <!-- Canvas -->
-        <!-- 1. Hidden Source (Raw HTML) -->
-        <div id="raw-content" style="position:absolute; left:-9999px; top:0; width: 210mm; visibility: hidden;">
-             <div class="paper-preview" v-html="previewHtml"></div>
-        </div>
-
-        <!-- 2. Visible Pagination Container -->
-        <div id="pagination-container" class="flex flex-col items-center space-y-8 pb-10 transition-transform duration-200 origin-top font-bookman" :style="{ transform: 'scale(' + zoomScale + ')' }">
-            <!-- Pages will be injected here by JS -->
-        </div>
-    </div>
-
-    <style>
-        .font-bookman {
-            font-family: 'Bookman Old Style', serif;
-        }
-        /* Ensure pages always use the font */
-        .paper-page {
-            font-family: 'Bookman Old Style', serif !important;
-        }
-        @media print {
-            body {
-                background-color: white !important;
-                -webkit-print-color-adjust: exact;
-            }
-            .paper-page, div.paper-page {
-                box-shadow: none !important;
-                margin: 0 !important;
-                border: none !important;
-                width: 100% !important;
-                page-break-after: always;
-            }
-            /* Hide controls & sidebar */
-            .no-print, aside, nav, .zoom-controls { display: none !important; }
             
-            /* Hide the grey background wrapper */
-            .bg-slate-200\/50 {
-                background-color: white !important;
-            }
-            #raw-content { display: none !important; }
-        }
-    </style>
+            <!-- Zoom Controls -->
+            <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+                <button @click="zoomOut" class="w-8 h-8 rounded-md hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition" title="Zoom Out">
+                    <i class="fas fa-minus text-xs"></i>
+                </button>
+                <span class="w-14 text-center text-xs font-semibold text-slate-600 dark:text-slate-300">{{ Math.round(zoomScale * 100) }}%</span>
+                <button @click="zoomIn" class="w-8 h-8 rounded-md hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition" title="Zoom In">
+                    <i class="fas fa-plus text-xs"></i>
+                </button>
+                <div class="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1"></div>
+                <button @click="resetZoom" class="w-8 h-8 rounded-md hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition" title="Reset Zoom">
+                    <i class="fas fa-expand text-xs"></i>
+                </button>
+            </div>
+        </header>
 
+        <!-- Preview Area -->
+        <div class="flex-1 overflow-auto p-4 lg:p-8">
+            <!-- Hidden Source -->
+            <div id="raw-content" style="position:absolute; left:-9999px; top:0; width: 210mm; visibility: hidden;">
+                <div class="paper-preview" v-html="previewHtml"></div>
+            </div>
+
+            <!-- Visible Pagination Container -->
+            <div id="pagination-container" 
+                 class="flex flex-col items-center space-y-6 pb-10 transition-transform duration-200 origin-top" 
+                 :style="{ transform: 'scale(' + zoomScale + ')' }">
+                <!-- Pages injected by JS -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Floating Quick Actions (Mobile) -->
+    <div class="fixed bottom-6 right-6 z-30 lg:hidden flex flex-col gap-2 no-print">
+        <button @click="saveDraft" :disabled="isSaving" 
+                class="w-14 h-14 rounded-full bg-primary-600 hover:bg-primary-700 text-white shadow-lg shadow-primary-500/30 flex items-center justify-center">
+            <i class="fas" :class="isSaving ? 'fa-spinner fa-spin' : 'fa-save'" class="text-xl"></i>
+        </button>
+    </div>
 </div>
 
-<!-- Vue Application Logic -->
+<!-- Vue Application -->
 <script src="<?php echo base_url('assets/js/mustache.min.js'); ?>"></script>
 <script src="<?php echo base_url('assets/js/sk_editor_vue.js'); ?>"></script>
 </body>

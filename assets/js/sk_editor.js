@@ -1,6 +1,5 @@
 $(document).ready(function () {
     // 1. Initialize Editor
-    console.log("Config:", TEMPLATE_CONFIG); // Debug
     renderSidebar(TEMPLATE_CONFIG);
     renderPreview();
 
@@ -14,14 +13,6 @@ $(document).ready(function () {
 
     $('#margin-top, #margin-bottom, #margin-left, #margin-right').on('input', function () {
         applyGlobalSettings();
-    });
-
-    $('#toggle-kop').change(function () {
-        if ($(this).is(':checked')) {
-            $('#preview-canvas').removeClass('hide-kop');
-        } else {
-            $('#preview-canvas').addClass('hide-kop');
-        }
     });
 
     function applyGlobalSettings() {
