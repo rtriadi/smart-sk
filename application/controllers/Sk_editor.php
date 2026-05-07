@@ -3,6 +3,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Sk_editor extends CI_Controller {
 
+    /**
+     * Constructor
+     * Loads necessary models, helpers, libraries and registers autoloader for Dompdf/Mustache.
+     */
     public function __construct() {
         parent::__construct();
         
@@ -49,6 +53,10 @@ class Sk_editor extends CI_Controller {
         $this->load->library('session');
     }
 
+    /**
+     * API: Get all templates
+     * Returns a JSON list of available templates.
+     */
     public function api_get_templates() {
         $templates = $this->Template_model->get_all_templates();
         $result = [];
@@ -63,6 +71,10 @@ class Sk_editor extends CI_Controller {
         echo json_encode($result);
     }
 
+    /**
+     * Dashboard/Index Page
+     * Displays the main dashboard with archives and templates.
+     */
     public function index() {
         $data['archives'] = $this->Archive_model->get_all_archives();
         $data['templates'] = $this->Template_model->get_all_templates();
@@ -72,6 +84,10 @@ class Sk_editor extends CI_Controller {
         $this->load->view('layout/enterprise_layout', $layout_data);
     }
 
+    /**
+     * Settings Page
+     * Manage categories and officials (pejabat).
+     */
     public function settings() {
         $this->load->model('Category_model');
         $data['categories'] = $this->Category_model->get_all();
@@ -158,6 +174,10 @@ class Sk_editor extends CI_Controller {
         $this->load->view('sk_editor/editor_view', $data);
     }
 
+    /**
+     * Save/Update Archive (Draft)
+     * Handles AJAX request to save input data and settings.
+     */
     public function save() {
         // AJAX handler to save JSON data
         $input_data = $this->input->post('data');
@@ -171,7 +191,6 @@ class Sk_editor extends CI_Controller {
              return;
         }
         
-        // Check for excessively large payload (likely uncompressed image) to prevent DB crash
         // Check for excessively large payload (likely uncompressed image) to prevent DB crash (max_allowed_packet is 1MB)
         if (strlen($input_data) > 950000) { // Limit to ~950KB to be safe below 1MB default
              $sizeMB = round(strlen($input_data) / 1048576, 2);
@@ -294,6 +313,12 @@ class Sk_editor extends CI_Controller {
         echo json_encode(['status' => 'success']);
     }
 
+    /**
+     * Generate PDF
+     * Renders the SK into a PDF file using Dompdf.
+     * 
+     * @param int $archive_id
+     */
     public function generate_pdf($archive_id) {
         $html = $this->_prepare_sk_html($archive_id, 'pdf');
         
@@ -337,23 +362,15 @@ class Sk_editor extends CI_Controller {
         redirect('sk_editor/archives');
     }
 
-    // Debug endpoint - remove in production
-    public function debug_archive($archive_id) {
-        $archive = $this->Archive_model->get_archive_by_id($archive_id);
-        $template = $this->Template_model->get_template_by_id($archive->template_id);
-        
-        header('Content-Type: application/json');
-        echo json_encode([
-            'archive_id' => $archive_id,
-            'template_id' => $archive->template_id,
-            'no_surat' => $archive->no_surat,
-            'input_data' => json_decode($archive->input_data_json, true),
-            'settings' => json_decode($archive->settings_json, true),
-            'html_pattern_length' => strlen($template->html_pattern),
-            'html_pattern_preview' => substr($template->html_pattern, 0, 500)
-        ], JSON_PRETTY_PRINT);
-    }
-
+    /**
+     * Prepare SK HTML
+     * Merges template pattern with data using Mustache engine.
+     * Handles CSS injection and image path correction.
+     *
+     * @param int $archive_id
+     * @param string $mode 'pdf' or 'web'
+     * @return string HTML content
+     */
     private function _prepare_sk_html($archive_id, $mode = 'pdf') {
         $archive = $this->Archive_model->get_archive_by_id($archive_id);
         if (!$archive) show_404();
@@ -483,13 +500,13 @@ class Sk_editor extends CI_Controller {
             .text-right { text-align: right; }
             .text-justify { text-align: justify; }
             .font-bold { font-weight: bold; }
-                .uppercase { text-transform: uppercase; }
-                .underline { text-decoration: underline; }
-                .italic { font-style: italic; }
-                
-                /* Margins */
-                .mb-4 { margin-bottom: 1rem; }
-                .mb-8 { margin-bottom: 2rem; }
+            .uppercase { text-transform: uppercase; }
+            .underline { text-decoration: underline; }
+            .italic { font-style: italic; }
+            
+            /* Margins */
+            .mb-4 { margin-bottom: 1rem; }
+            .mb-8 { margin-bottom: 2rem; }
             ";
 
             if ($mode === 'pdf') {
@@ -583,6 +600,71 @@ class Sk_editor extends CI_Controller {
                      // No body tag, wrap it
                      $html = '<div class="page-container">' . $html . '</div>';
                 }
+
+                // Inject Automatic Pagination Script for Web Preview
+                // This ensures content that exceeds page height is moved to a new page visual
+                $paperHeightMm = ($settings['paperSize'] === 'F4') ? 330 : 297;
+                
+                $paginationScript = "
+                <script>
+                    window.onload = function() {
+                        const A4_HEIGHT_MM = {$paperHeightMm};
+                        const MM_TO_PX = 3.7795275591; // 96 DPI conversion
+                        const PAGE_HEIGHT_PX = Math.ceil(A4_HEIGHT_MM * MM_TO_PX);
+                        // Buffer slightly to avoid strict edge cases
+                        const MAX_HEIGHT = PAGE_HEIGHT_PX - 2; 
+
+                        const firstPage = document.querySelector('.page-container');
+                        if (!firstPage) return;
+
+                        // Check if content actually overflows
+                        if (firstPage.scrollHeight <= MAX_HEIGHT) return;
+
+                        // Prepare for pagination
+                        const allNodes = Array.from(firstPage.children);
+                        const body = document.body;
+                        
+                        // Clear first page to refill it
+                        // We use a fragment to hold nodes temporarily
+                        const fragment = document.createDocumentFragment();
+                        allNodes.forEach(node => fragment.appendChild(node));
+
+                        // Reset pages list
+                        let pages = [firstPage];
+                        let currentPage = firstPage;
+                        currentPage.innerHTML = ''; // Clear
+
+                        // Refill nodes
+                        Array.from(fragment.children).forEach((node) => {
+                            currentPage.appendChild(node);
+                            
+                            // Check overflow
+                            if (currentPage.scrollHeight > MAX_HEIGHT) {
+                                // Overflow detected! 
+                                // Remove the node that caused overflow
+                                currentPage.removeChild(node);
+                                
+                                // Create new page
+                                const newPage = document.createElement('div');
+                                newPage.className = 'page-container';
+                                newPage.style.marginTop = '30px'; // Visual gap
+                                body.appendChild(newPage);
+                                
+                                // Update current page reference
+                                currentPage = newPage;
+                                pages.push(currentPage);
+                                
+                                // Append node to new page
+                                currentPage.appendChild(node);
+                            }
+                        });
+                        
+                        // Add visual page numbers or footer if needed (optional)
+                    };
+                </script>
+                ";
+                
+                $html .= $paginationScript;
             }
         }
 

@@ -86,7 +86,9 @@ createApp({
             fontSize: '12pt',
             lineHeight: '1.5',
             showPageNumbers: false,
-            defaultSkLogo: ''
+            defaultSkLogo: '',
+            show_gelar: true,
+            master_pengadilan: 'PENGADILAN AGAMA GORONTALO'
         });
 
         // Theme Logic
@@ -97,6 +99,8 @@ createApp({
         const activeTab = ref('form');
         const isDataSectionOpen = ref(true);
         const isMandatorySectionOpen = ref(true);
+        const isPenandatanganOpen = ref(true);
+        const isSalinanOpen = ref(false);
 
         const toggleSidebar = () => {
             isSidebarOpen.value = !isSidebarOpen.value;
@@ -133,31 +137,11 @@ createApp({
         const setPejabat = (id) => {
             const p = pejabatList.value.find(x => x.id == id);
             if (p) {
-                let jabatanFull = p.jabatan;
-
-                const titles = {
-                    'Ketua': 'KETUA PENGADILAN AGAMA GORONTALO',
-                    'Wakil Ketua': 'WAKIL KETUA PENGADILAN AGAMA GORONTALO',
-                    'Panitera': 'PANITERA PENGADILAN AGAMA GORONTALO',
-                    'Sekretaris': 'SEKRETARIS PENGADILAN AGAMA GORONTALO'
-                };
-
                 const safeJabatan = p.jabatan ? p.jabatan.trim() : '';
-
-                if (titles[safeJabatan]) {
-                    jabatanFull = titles[safeJabatan];
-                } else {
-                    const key = Object.keys(titles).find(k => k.toLowerCase() === safeJabatan.toLowerCase());
-                    if (key) {
-                        jabatanFull = titles[key];
-                    } else {
-                        jabatanFull = safeJabatan.toUpperCase();
-                    }
-                }
 
                 formData.nama_penandatangan = p.nama;
                 formData.nip_penandatangan = p.nip;
-                formData.jabatan_penandatangan = jabatanFull;
+                formData.jabatan_penandatangan = safeJabatan.toUpperCase();
                 formData['jabatan_penandatangan_select'] = p.jabatan;
             }
         };
@@ -240,6 +224,11 @@ createApp({
                     formData[field.variable] = '';
                 }
             });
+
+            // Initialize Salinan if not present
+            if (!formData.salinan) {
+                formData.salinan = [];
+            }
 
             // Initialize Attachments if not present
             if (!formData.attachments) {
@@ -365,8 +354,37 @@ createApp({
             }
 
             // Simple Replacements (FormData)
-            for (const [key, value] of Object.entries(formData)) {
+            const cleanName = (fullName) => {
+                if (!fullName) return '';
+                let name = fullName;
+                // Remove front titles iteratively (e.g. Drs. H.)
+                while (name.match(/^[A-Za-z]+\.\s*/)) {
+                    name = name.replace(/^[A-Za-z]+\.\s*/, '');
+                }
+                // Remove back titles (everything after the first comma)
+                name = name.replace(/,.*$/, '');
+                return name.trim();
+            };
+
+            // --- Pre-process Headers (KEPUTUSAN & TENTANG) ---
+            // We want the top headers to have the full title (e.g. KETUA PENGADILAN AGAMA GORONTALO)
+            // But the signature at the bottom to only have the short title (e.g. KETUA)
+            const jabatanUpperPre = (formData.jabatan_penandatangan || '').toUpperCase();
+            const masterPengadilanPre = (globalSettings.master_pengadilan || '').toUpperCase();
+            const gabunganJabatanPre = (jabatanUpperPre + ' ' + masterPengadilanPre).trim();
+
+            if (gabunganJabatanPre) {
+                // Replace {{jabatan_penandatangan}} that appear closely after KEPUTUSAN or TENTANG
+                html = html.replace(/(KEPUTUSAN[\s\S]{0,150}?){{jabatan_penandatangan}}/i, '$1' + gabunganJabatanPre);
+                html = html.replace(/(TENTANG[\s\S]{0,150}?){{jabatan_penandatangan}}/i, '$1' + gabunganJabatanPre);
+            }
+
+            for (let [key, value] of Object.entries(formData)) {
                 if (Array.isArray(value)) continue;
+
+                if (key === 'nama_penandatangan' && !globalSettings.show_gelar) {
+                    value = cleanName(value);
+                }
 
                 // Handle hide NIP based on mandatory settings
                 if (key === 'nip_penandatangan' && !mandatorySettings.tampilkan_nip) {
@@ -393,12 +411,16 @@ createApp({
                 html = html.replace(/NIP\.\s*$/gm, '');
             }
 
-            // Handle Hijri date visibility
+            // Handle Hijri date visibility - remove entire <p> containing hijri if off
             if (!mandatorySettings.tampilkan_hijriah) {
+                // Remove entire <p> tag that contains only {{tanggal_hijri}} or is now empty
+                html = html.replace(/<p[^>]*>\s*{{tanggal_hijri}}\s*<\/p>/g, '');
                 html = html.replace(/{{tanggal_hijri}}/g, '');
                 // Also remove common Hijri wrappers
                 html = html.replace(/\s*\/\s*{{tanggal_hijri}}/g, '');
                 html = html.replace(/\({{tanggal_hijri}}\)/g, '');
+                // Remove empty <p> tags that may remain
+                html = html.replace(/<p[^>]*>\s*<\/p>/g, '');
             }
 
             // Replace mandatory settings variables
@@ -425,6 +447,37 @@ createApp({
                     });
                 }
             });
+
+            // Diktum (KESATU, KEDUA, KETIGA, ...) rendering
+            const diktumLabels = ['KESATU', 'KEDUA', 'KETIGA', 'KEEMPAT', 'KELIMA', 'KEENAM', 'KETUJUH', 'KEDELAPAN', 'KESEMBILAN', 'KESEPULUH', 'KESEBELAS', 'KEDUA BELAS', 'KETIGA BELAS', 'KEEMPAT BELAS', 'KELIMA BELAS'];
+            const diktumItems = formData.list_diktum || [];
+            
+            // Build the "Menetapkan : KEPUTUSAN ... TENTANG ..." header auto text
+            const jabatanUpper = (formData.jabatan_penandatangan || '').toUpperCase();
+            const masterPengadilan = (globalSettings.master_pengadilan || '').toUpperCase();
+            const judulUpper = (formData.judul_sk || '').toUpperCase();
+            const menetapkanHeader = '<strong>KEPUTUSAN ' + jabatanUpper + ' ' + masterPengadilan + ' TENTANG ' + judulUpper + '</strong>';
+            
+            // Replace placeholder with header + diktum items
+            if (diktumItems.length > 0) {
+                let diktumHtml = menetapkanHeader;
+                diktumItems.forEach((item, idx) => {
+                    const label = diktumLabels[idx] || 'KE-' + (idx + 1);
+                    const formattedItem = escapeHtml(item).replace(/\n/g, '<br>');
+                    // Each diktum item gets its own table row (KESATU, KEDUA, etc.)
+                    diktumHtml += '</td></tr></tbody></table>';
+                    diktumHtml += '<table style="width: 100%; border: none; margin-bottom: 5px;"><tbody>';
+                    diktumHtml += '<tr>';
+                    diktumHtml += '<td style="width: 120px; vertical-align: top; border: none; padding: 5px 0; font-weight: bold;">' + label + '</td>';
+                    diktumHtml += '<td style="width: 20px; vertical-align: top; border: none; padding: 5px 0;">:</td>';
+                    diktumHtml += '<td style="vertical-align: top; border: none; padding: 5px 0;">' + formattedItem + '</td>';
+                    diktumHtml += '</tr>';
+                });
+                html = html.replace('{{diktum_placeholder}}', diktumHtml);
+            } else {
+                // No diktum items yet, show just the header
+                html = html.replace('{{diktum_placeholder}}', menetapkanHeader);
+            }
 
             // Conditional Logic
             const ifRegex = /{{#if\s+(.*?)}}([\s\S]*?){{\/if}}/g;
@@ -464,6 +517,20 @@ createApp({
                     const lampiranHtml = '\n                        <div class="smart-attachment-break" data-title="' + (att.title || 'Lampiran') + '"></div>\n                        <div class="attachment-header" style="float: right; text-align: left; width: 75%; margin-bottom: 20px; font-size: 10pt; line-height: 1.2;">\n                            <table>\n                                <tr>\n                                    <td style="vertical-align: top; white-space: nowrap; width: 1%;">' + lampiranLabel + '</td>\n                                    <td style="vertical-align: top; width: 1%; padding: 0 5px;">:</td>\n                                    <td style="vertical-align: top;">KEPUTUSAN ' + pejabatJabatan + '<br>TENTANG ' + (formData.judul_sk || formData.tentang || '').toUpperCase() + '</td>\n                                </tr>\n                                <tr>\n                                    <td style="vertical-align: top;">NOMOR</td>\n                                    <td style="vertical-align: top;">:</td>\n                                    <td>' + noSK + '</td>\n                                </tr>\n                                <tr>\n                                    <td style="vertical-align: top;">TANGGAL</td>\n                                    <td style="vertical-align: top;">:</td>\n                                    <td>' + tanggalIndo + '</td>\n                                </tr>\n                            </table>\n                        </div>\n                        <div style="clear: both;"></div>\n                        <div class="attachment-content">\n                            ' + (att.content || '') + '\n                        </div>\n                    ';
                     html += lampiranHtml;
                 });
+            }
+
+            // Inject Salinan / Tembusan section at the bottom
+            if (formData.salinan && formData.salinan.length > 0) {
+                const filteredSalinan = formData.salinan.filter(s => s && s.trim());
+                if (filteredSalinan.length > 0) {
+                    let salinanHtml = '<div style="margin-top: 40px;">';
+                    salinanHtml += '<p style="margin: 0 0 5px 0;">SALINAN Keputusan ini disampaikan kepada:</p>';
+                    filteredSalinan.forEach((s, idx) => {
+                        salinanHtml += '<p style="margin: 0; padding-left: 2em; text-indent: -1.5em;">' + (idx + 1) + '.&nbsp;&nbsp;' + escapeHtml(s) + '</p>';
+                    });
+                    salinanHtml += '</div>';
+                    html += salinanHtml;
+                }
             }
 
             return html;
@@ -508,6 +575,15 @@ createApp({
             Vue.nextTick(() => {
                 initTinyMCE(id, index);
             });
+        };
+
+        const addSalinan = () => {
+            if (!formData.salinan) formData.salinan = [];
+            formData.salinan.push('');
+        };
+
+        const removeSalinan = (index) => {
+            if (formData.salinan) formData.salinan.splice(index, 1);
         };
 
         const removeAttachment = (index) => {
@@ -1057,6 +1133,8 @@ createApp({
             removeRepeaterItem,
             addAttachment,
             removeAttachment,
+            addSalinan,
+            removeSalinan,
             saveDraft,
             isSaving,
             printPdf,
@@ -1064,6 +1142,7 @@ createApp({
             exportPdf,
             fixAutoFormatting,
             pejabatList,
+            setPejabat,
             paginate,
             handleContentLogoUpload,
             handleGenericImageUpload,
@@ -1073,6 +1152,8 @@ createApp({
             toggleDataSection,
             isMandatorySectionOpen,
             toggleMandatorySection,
+            isPenandatanganOpen,
+            isSalinanOpen,
             zoomScale,
             zoomIn,
             zoomOut,

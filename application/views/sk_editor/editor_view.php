@@ -380,6 +380,71 @@
                     </div>
                 </div>
 
+                <!-- Penandatangan Section -->
+                <div class="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 rounded-xl overflow-hidden border border-indigo-200 dark:border-indigo-800">
+                    <button @click="isPenandatanganOpen = !isPenandatanganOpen" 
+                            class="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-indigo-100/50 dark:hover:bg-indigo-800/20 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="w-7 h-7 rounded-full bg-indigo-500 text-white text-xs font-bold flex items-center justify-center">
+                                <i class="fas fa-user-tie"></i>
+                            </span>
+                            <span class="font-semibold text-indigo-800 dark:text-indigo-200 text-sm">Penandatangan</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-indigo-500 transition-transform duration-200" :class="{'rotate-180': isPenandatanganOpen}"></i>
+                    </button>
+                    
+                    <div v-show="isPenandatanganOpen" class="px-4 pb-4 space-y-3 border-t border-indigo-200 dark:border-indigo-700 pt-4">
+                        
+                        <!-- Pejabat Dropdown -->
+                        <div>
+                            <label class="block text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-1.5 uppercase tracking-wide">
+                                <i class="fas fa-user-check mr-1"></i> Pilih Pejabat
+                            </label>
+                            <select @change="setPejabat($event.target.value)" 
+                                    class="w-full bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition">
+                                <option value="">-- Pilih dari Master Pejabat --</option>
+                                <option v-for="p in pejabatList" :key="p.id" :value="p.id" :selected="formData.jabatan_penandatangan_select === p.jabatan">
+                                    {{ p.nama }} - {{ p.jabatan }}
+                                </option>
+                            </select>
+                            <p class="text-[10px] text-indigo-400 mt-1"><i class="fas fa-info-circle mr-1"></i>Otomatis terisi, tetap bisa diubah manual</p>
+                        </div>
+
+                        <!-- Nama Penandatangan -->
+                        <div>
+                            <label class="block text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-1.5 uppercase tracking-wide">
+                                Nama Penandatangan
+                            </label>
+                            <input type="text" 
+                                   v-model="formData.nama_penandatangan"
+                                   placeholder="Nama lengkap penandatangan"
+                                   class="w-full bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition">
+                        </div>
+
+                        <!-- Jabatan Penandatangan -->
+                        <div>
+                            <label class="block text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-1.5 uppercase tracking-wide">
+                                Jabatan Penandatangan
+                            </label>
+                            <input type="text" 
+                                   v-model="formData.jabatan_penandatangan"
+                                   placeholder="Jabatan penandatangan"
+                                   class="w-full bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition">
+                        </div>
+
+                        <!-- NIP Penandatangan -->
+                        <div>
+                            <label class="block text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-1.5 uppercase tracking-wide">
+                                NIP Penandatangan
+                            </label>
+                            <input type="text" 
+                                   v-model="formData.nip_penandatangan"
+                                   placeholder="NIP penandatangan"
+                                   class="w-full bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Mandatory Settings Section (Always Present) -->
                 <div class="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl overflow-hidden border border-amber-200 dark:border-amber-800">
                     <button @click="toggleMandatorySection" 
@@ -395,17 +460,6 @@
                     
                     <div v-show="isMandatorySectionOpen" class="px-4 pb-4 space-y-4 border-t border-amber-200 dark:border-amber-700 pt-4">
                         
-                        <!-- Jumlah Salinan -->
-                        <div>
-                            <label class="block text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1.5 uppercase tracking-wide">
-                                <i class="fas fa-copy mr-1"></i> Jumlah Salinan
-                            </label>
-                            <input type="number" 
-                                   v-model="mandatorySettings.jumlah_salinan" 
-                                   min="1" max="100"
-                                   class="w-full bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2.5 text-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition">
-                        </div>
-
                         <!-- Nomor Urut -->
                         <div>
                             <label class="block text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1.5 uppercase tracking-wide">
@@ -414,6 +468,17 @@
                             <input type="number" 
                                    v-model="mandatorySettings.nomor_urut" 
                                    min="1"
+                                   class="w-full bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2.5 text-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition">
+                        </div>
+
+                        <!-- Jumlah Salinan -->
+                        <div>
+                            <label class="block text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1.5 uppercase tracking-wide">
+                                <i class="fas fa-copy mr-1"></i> Jumlah Salinan
+                            </label>
+                            <input type="number" 
+                                   v-model="mandatorySettings.jumlah_salinan" 
+                                   min="1" max="100"
                                    class="w-full bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2.5 text-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition">
                         </div>
 
@@ -445,6 +510,38 @@
                                 </div>
                             </label>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Salinan / Tembusan Section -->
+                <div class="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl overflow-hidden border border-emerald-200 dark:border-emerald-800">
+                    <button @click="isSalinanOpen = !isSalinanOpen" 
+                            class="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-emerald-100/50 dark:hover:bg-emerald-800/20 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="w-7 h-7 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">
+                                <i class="fas fa-paper-plane"></i>
+                            </span>
+                            <span class="font-semibold text-emerald-800 dark:text-emerald-200 text-sm">Salinan / Tembusan</span>
+                            <span v-if="formData.salinan && formData.salinan.length > 0" class="text-[10px] bg-emerald-500 text-white px-1.5 py-0.5 rounded-full">{{ formData.salinan.length }}</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-emerald-500 transition-transform duration-200" :class="{'rotate-180': isSalinanOpen}"></i>
+                    </button>
+                    
+                    <div v-show="isSalinanOpen" class="px-4 pb-4 space-y-3 border-t border-emerald-200 dark:border-emerald-700 pt-4">
+                        <!-- Salinan Items -->
+                        <div v-for="(item, sIndex) in formData.salinan" :key="sIndex" class="flex gap-2 items-start group">
+                            <span class="w-6 h-6 rounded-full bg-emerald-200 dark:bg-emerald-700 text-emerald-700 dark:text-emerald-200 text-xs flex items-center justify-center shrink-0 mt-2">{{ sIndex + 1 }}</span>
+                            <input type="text" v-model="formData.salinan[sIndex]" 
+                                   placeholder="Nama penerima salinan"
+                                   class="flex-1 bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-emerald-500 outline-none transition">
+                            <button @click="removeSalinan(sIndex)" class="w-8 h-8 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition opacity-0 group-hover:opacity-100 mt-1">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <!-- Add Button -->
+                        <button @click="addSalinan" class="w-full py-2 border-2 border-dashed border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 rounded-lg hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors text-sm font-medium">
+                            <i class="fas fa-plus mr-1"></i> Tambah Penerima Salinan
+                        </button>
                     </div>
                 </div>
             </div>
@@ -497,6 +594,30 @@
                             <label class="block text-[10px] text-slate-400 dark:text-slate-500 mb-1">Kanan</label>
                             <input type="number" v-model="globalSettings.marginRight" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-2 py-2 text-sm text-center focus:border-primary-500 outline-none">
                         </div>
+                    </div>
+                </div>
+
+                <!-- Pengaturan TTD -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                    <h3 class="font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+                        <i class="fas fa-signature text-primary-500"></i> Pengaturan TTD
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Master Pengadilan</label>
+                            <input type="text" v-model="globalSettings.master_pengadilan" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" placeholder="PENGADILAN AGAMA GORONTALO">
+                            <p class="text-[10px] text-slate-400 mt-1">Digabung dengan jabatan pada Diktum (Contoh: KETUA PENGADILAN AGAMA GORONTALO)</p>
+                        </div>
+                        <label class="flex items-center justify-between cursor-pointer group pt-2 border-t border-slate-200 dark:border-slate-700">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-slate-700 dark:text-slate-300 font-medium">Tampilkan Gelar Pejabat</span>
+                            </div>
+                            <div class="relative">
+                                <input type="checkbox" v-model="globalSettings.show_gelar" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-300 dark:bg-slate-600 rounded-full peer-checked:bg-primary-500 transition-colors"></div>
+                                <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
+                            </div>
+                        </label>
                     </div>
                 </div>
 
@@ -684,6 +805,6 @@
 
 <!-- Vue Application -->
 <script src="<?php echo base_url('assets/js/mustache.min.js'); ?>"></script>
-<script src="<?php echo base_url('assets/js/sk_editor_vue.js'); ?>"></script>
+<script src="<?php echo base_url('assets/js/sk_editor_vue.js?v=' . (time()+1)); ?>"></script>
 </body>
 </html>

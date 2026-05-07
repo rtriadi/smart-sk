@@ -7,11 +7,11 @@ ADD COLUMN `status` VARCHAR(20) DEFAULT 'draft' AFTER `no_surat`;
 
 -- Add finalized_at column for tracking when SK was finalized
 ALTER TABLE `tb_sk_archives` 
-ADD COLUMN `finalized_at` DATETIME NULL AFTER `updated_at`;
+ADD COLUMN `finalized_at` DATETIME NULL AFTER `created_at`;
 
 -- Update existing records: mark non-DRAFT records as final
 UPDATE `tb_sk_archives` 
-SET `status` = 'final', `finalized_at` = `updated_at`
+SET `status` = 'final', `finalized_at` = `created_at`
 WHERE `no_surat` NOT LIKE 'DRAFT%';
 
 -- Update existing records: mark DRAFT records as draft
