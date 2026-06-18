@@ -200,7 +200,7 @@
 </div>
 
 <!-- Template Builder Logic (runs first, mounts to #template-builder-app) -->
-<script src="<?php echo base_url('assets/js/template_builder_vue.js'); ?>"></script>
+<script src="<?php echo base_url('assets/js/template_builder_vue.js?v=' . time()); ?>"></script>
 
 <!-- Vue Logic for Form (mounts to #template-app) -->
 <script>

@@ -88,7 +88,8 @@ createApp({
             showPageNumbers: false,
             defaultSkLogo: '',
             show_gelar: true,
-            master_pengadilan: 'PENGADILAN AGAMA GORONTALO'
+            master_pengadilan: 'PENGADILAN AGAMA GORONTALO',
+            diktum_justify: true
         });
 
         // Theme Logic
@@ -374,9 +375,17 @@ createApp({
             const gabunganJabatanPre = (jabatanUpperPre + ' ' + masterPengadilanPre).trim();
 
             if (gabunganJabatanPre) {
-                // Replace {{jabatan_penandatangan}} that appear closely after KEPUTUSAN or TENTANG
-                html = html.replace(/(KEPUTUSAN[\s\S]{0,150}?){{jabatan_penandatangan}}/i, '$1' + gabunganJabatanPre);
-                html = html.replace(/(TENTANG[\s\S]{0,150}?){{jabatan_penandatangan}}/i, '$1' + gabunganJabatanPre);
+                // The LAST {{jabatan_penandatangan}} in template is the signature block → keep original (KETUA only)
+                // All OTHER occurrences (header, section separator) → use combined version
+                const lastIdx = html.lastIndexOf('{{jabatan_penandatangan}}');
+                if (lastIdx !== -1) {
+                    // Mark the last one (signature) with a unique placeholder
+                    html = html.substring(0, lastIdx) + '{{__sig_jabatan__}}' + html.substring(lastIdx + '{{jabatan_penandatangan}}'.length);
+                }
+                // Replace all remaining with combined version
+                html = html.replace(/{{jabatan_penandatangan}}/g, gabunganJabatanPre);
+                // Restore the signature block to original short jabatan
+                html = html.replace('{{__sig_jabatan__}}', jabatanUpperPre);
             }
 
             for (let [key, value] of Object.entries(formData)) {
@@ -449,28 +458,55 @@ createApp({
             });
 
             // Diktum (KESATU, KEDUA, KETIGA, ...) rendering
-            const diktumLabels = ['KESATU', 'KEDUA', 'KETIGA', 'KEEMPAT', 'KELIMA', 'KEENAM', 'KETUJUH', 'KEDELAPAN', 'KESEMBILAN', 'KESEPULUH', 'KESEBELAS', 'KEDUA BELAS', 'KETIGA BELAS', 'KEEMPAT BELAS', 'KELIMA BELAS'];
+            const numberToDiktum = (num, style = 'baku') => {
+                if (style === 'angka') return num + '.';
+                const words = {
+                    1: 'KESATU', 2: 'KEDUA', 3: 'KETIGA', 4: 'KEEMPAT', 5: 'KELIMA',
+                    6: 'KEENAM', 7: 'KETUJUH', 8: 'KEDELAPAN', 9: 'KESEMBILAN', 10: 'KESEPULUH',
+                    11: 'KESEBELAS'
+                };
+                if (style === 'alternatif' && num === 1) return 'PERTAMA';
+                if (words[num]) return words[num];
+                if (num < 20) {
+                    const base = {1:'SATU', 2:'DUA', 3:'TIGA', 4:'EMPAT', 5:'LIMA', 6:'ENAM', 7:'TUJUH', 8:'DELAPAN', 9:'SEMBILAN'};
+                    return 'KE' + base[num - 10] + ' BELAS';
+                }
+                return 'KE-' + num;
+            };
+
             const diktumItems = formData.list_diktum || [];
             
             // Build the "Menetapkan : KEPUTUSAN ... TENTANG ..." header auto text
             const jabatanUpper = (formData.jabatan_penandatangan || '').toUpperCase();
             const masterPengadilan = (globalSettings.master_pengadilan || '').toUpperCase();
             const judulUpper = (formData.judul_sk || '').toUpperCase();
-            const menetapkanHeader = '<strong>KEPUTUSAN ' + jabatanUpper + ' ' + masterPengadilan + ' TENTANG ' + judulUpper + '</strong>';
+            
+            const headerType = globalSettings.diktum_header_type || 'keputusan';
+            let diktumHeaderPrefix = 'KEPUTUSAN';
+            if (headerType === 'keputusan_bersama') {
+                diktumHeaderPrefix = 'KEPUTUSAN BERSAMA';
+            } else if (headerType === 'penetapan') {
+                diktumHeaderPrefix = 'PENETAPAN';
+            }
+            
+            const menetapkanHeader = diktumHeaderPrefix + ' ' + jabatanUpper + ' ' + masterPengadilan + ' TENTANG ' + judulUpper;
             
             // Replace placeholder with header + diktum items
             if (diktumItems.length > 0) {
+                // Apply justify alignment to diktum content when enabled (default ON)
+                const diktumAlign = globalSettings.diktum_justify === false ? 'left' : 'justify';
+                const diktumStyle = globalSettings.diktum_style || 'baku';
                 let diktumHtml = menetapkanHeader;
                 diktumItems.forEach((item, idx) => {
-                    const label = diktumLabels[idx] || 'KE-' + (idx + 1);
+                    const label = numberToDiktum(idx + 1, diktumStyle);
                     const formattedItem = escapeHtml(item).replace(/\n/g, '<br>');
                     // Each diktum item gets its own table row (KESATU, KEDUA, etc.)
                     diktumHtml += '</td></tr></tbody></table>';
                     diktumHtml += '<table style="width: 100%; border: none; margin-bottom: 5px;"><tbody>';
                     diktumHtml += '<tr>';
-                    diktumHtml += '<td style="width: 120px; vertical-align: top; border: none; padding: 5px 0; font-weight: bold;">' + label + '</td>';
+                    diktumHtml += '<td style="width: 120px; vertical-align: top; border: none; padding: 5px 0;">' + label + '</td>';
                     diktumHtml += '<td style="width: 20px; vertical-align: top; border: none; padding: 5px 0;">:</td>';
-                    diktumHtml += '<td style="vertical-align: top; border: none; padding: 5px 0;">' + formattedItem + '</td>';
+                    diktumHtml += '<td style="vertical-align: top; border: none; padding: 5px 0; text-align: ' + diktumAlign + ';">' + formattedItem + '</td>';
                     diktumHtml += '</tr>';
                 });
                 html = html.replace('{{diktum_placeholder}}', diktumHtml);
@@ -507,14 +543,22 @@ createApp({
                 formData.attachments.forEach((att, index) => {
                     const noSK = formData.no_sk || '...';
                     const tanggalIndo = formData.tanggal_indo || '...';
-                    const pejabatJabatan = (formData.jabatan_penandatangan || 'PEJABAT').toUpperCase();
+                    
+                    const headerTypeAtt = globalSettings.diktum_header_type || 'keputusan';
+                    let diktumHeaderPrefixAtt = 'KEPUTUSAN';
+                    if (headerTypeAtt === 'keputusan_bersama') diktumHeaderPrefixAtt = 'KEPUTUSAN BERSAMA';
+                    else if (headerTypeAtt === 'penetapan') diktumHeaderPrefixAtt = 'PENETAPAN';
+
+                    const jabatanPart = (formData.jabatan_penandatangan || '').toUpperCase();
+                    const masterPart = (globalSettings.master_pengadilan || '').toUpperCase();
+                    const pejabatJabatan = (jabatanPart + ' ' + masterPart).trim() || 'PEJABAT';
 
                     let lampiranLabel = 'LAMPIRAN';
                     if (totalAtth > 1) {
                         lampiranLabel += ' ' + toRoman(index + 1);
                     }
 
-                    const lampiranHtml = '\n                        <div class="smart-attachment-break" data-title="' + (att.title || 'Lampiran') + '"></div>\n                        <div class="attachment-header" style="float: right; text-align: left; width: 75%; margin-bottom: 20px; font-size: 10pt; line-height: 1.2;">\n                            <table>\n                                <tr>\n                                    <td style="vertical-align: top; white-space: nowrap; width: 1%;">' + lampiranLabel + '</td>\n                                    <td style="vertical-align: top; width: 1%; padding: 0 5px;">:</td>\n                                    <td style="vertical-align: top;">KEPUTUSAN ' + pejabatJabatan + '<br>TENTANG ' + (formData.judul_sk || formData.tentang || '').toUpperCase() + '</td>\n                                </tr>\n                                <tr>\n                                    <td style="vertical-align: top;">NOMOR</td>\n                                    <td style="vertical-align: top;">:</td>\n                                    <td>' + noSK + '</td>\n                                </tr>\n                                <tr>\n                                    <td style="vertical-align: top;">TANGGAL</td>\n                                    <td style="vertical-align: top;">:</td>\n                                    <td>' + tanggalIndo + '</td>\n                                </tr>\n                            </table>\n                        </div>\n                        <div style="clear: both;"></div>\n                        <div class="attachment-content">\n                            ' + (att.content || '') + '\n                        </div>\n                    ';
+                    const lampiranHtml = '\n                        <div class="smart-attachment-break" data-title="' + (att.title || 'Lampiran') + '"></div>\n                        <div class="attachment-header" style="float: right; text-align: left; width: 75%; margin-bottom: 20px; font-size: 10pt; line-height: 1.2;">\n                            <table>\n                                <tr>\n                                    <td style="vertical-align: top; white-space: nowrap; width: 1%;">' + lampiranLabel + '</td>\n                                    <td style="vertical-align: top; width: 1%; padding: 0 5px;">:</td>\n                                    <td style="vertical-align: top;">' + diktumHeaderPrefixAtt + ' ' + pejabatJabatan + '<br>TENTANG ' + (formData.judul_sk || formData.tentang || '').toUpperCase() + '</td>\n                                </tr>\n                                <tr>\n                                    <td style="vertical-align: top;">NOMOR</td>\n                                    <td style="vertical-align: top;">:</td>\n                                    <td>' + noSK + '</td>\n                                </tr>\n                                <tr>\n                                    <td style="vertical-align: top;">TANGGAL</td>\n                                    <td style="vertical-align: top;">:</td>\n                                    <td>' + tanggalIndo + '</td>\n                                </tr>\n                            </table>\n                        </div>\n                        <div style="clear: both;"></div>\n                        <div class="attachment-content">\n                            ' + (att.content || '') + '\n                        </div>\n                    ';
                     html += lampiranHtml;
                 });
             }
@@ -523,8 +567,14 @@ createApp({
             if (formData.salinan && formData.salinan.length > 0) {
                 const filteredSalinan = formData.salinan.filter(s => s && s.trim());
                 if (filteredSalinan.length > 0) {
+                    const distType = globalSettings.distribusi_type || 'salinan';
+                    let distIntro = 'SALINAN Keputusan ini disampaikan kepada:';
+                    if (distType === 'petikan') distIntro = 'PETIKAN Keputusan ini disampaikan kepada:';
+                    else if (distType === 'tembusan') distIntro = 'Tembusan:';
+                    else if (distType === 'tembusan_yth') distIntro = 'Tembusan Yth:';
+
                     let salinanHtml = '<div style="margin-top: 40px;">';
-                    salinanHtml += '<p style="margin: 0 0 5px 0;">SALINAN Keputusan ini disampaikan kepada:</p>';
+                    salinanHtml += '<p style="margin: 0 0 5px 0;">' + distIntro + '</p>';
                     filteredSalinan.forEach((s, idx) => {
                         salinanHtml += '<p style="margin: 0; padding-left: 2em; text-indent: -1.5em;">' + (idx + 1) + '.&nbsp;&nbsp;' + escapeHtml(s) + '</p>';
                     });

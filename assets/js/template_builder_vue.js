@@ -11,8 +11,8 @@ const TemplateBuilder = {
         
         // Default HTML template for new SK
         const defaultHtmlTemplate = `<div style="text-align: center; margin-bottom: 20px;">
-<p style="font-size: 14pt; font-weight: bold; margin: 0;">KEPUTUSAN</p>
-<p style="font-size: 14pt; font-weight: bold; margin: 0;">{{jabatan_penandatangan}}</p>
+<p style="font-size: 12pt; font-weight: bold; margin: 0;">KEPUTUSAN</p>
+<p style="font-size: 12pt; font-weight: bold; margin: 0;">{{jabatan_penandatangan}}</p>
 <p style="font-size: 12pt; margin: 5px 0;">NOMOR: {{no_sk}}</p>
 <p style="font-size: 12pt; font-weight: bold; margin: 10px 0;">TENTANG</p>
 <p style="font-size: 12pt; font-weight: bold; margin: 0;">{{judul_sk}}</p>
@@ -82,7 +82,7 @@ const TemplateBuilder = {
 <td style="text-align: center; border: none;">
 <p style="margin: 0;">Ditetapkan di {{tempat_penetapan}}</p>
 <p style="margin: 0;">Pada tanggal {{tanggal_indo}}</p>
-<p style="margin: 30px 0 5px 0; font-weight: bold;">{{jabatan_penandatangan}}</p>
+<p style="margin: 30px 0 5px 0; font-weight: bold;">{{jabatan_penandatangan}},</p>
 <p style="margin: 60px 0 5px 0; font-weight: bold; text-decoration: underline;">{{nama_penandatangan}}</p>
 <p style="margin: 0;">NIP. {{nip_penandatangan}}</p>
 </td>

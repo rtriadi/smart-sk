@@ -528,6 +528,18 @@
                     </button>
                     
                     <div v-show="isSalinanOpen" class="px-4 pb-4 space-y-3 border-t border-emerald-200 dark:border-emerald-700 pt-4">
+                        
+                        <!-- Jenis Distribusi -->
+                        <div class="mb-3">
+                            <label class="block text-xs font-medium text-emerald-700 dark:text-emerald-400 mb-1.5">Jenis Distribusi</label>
+                            <select v-model="globalSettings.distribusi_type" class="w-full bg-emerald-50/50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 rounded-lg px-3 py-2 text-sm focus:border-emerald-500 outline-none">
+                                <option value="salinan">Salinan Keputusan ini disampaikan kepada:</option>
+                                <option value="petikan">Petikan Keputusan ini disampaikan kepada:</option>
+                                <option value="tembusan">Tembusan:</option>
+                                <option value="tembusan_yth">Tembusan Yth:</option>
+                            </select>
+                        </div>
+
                         <!-- Salinan Items -->
                         <div v-for="(item, sIndex) in formData.salinan" :key="sIndex" class="flex gap-2 items-start group">
                             <span class="w-6 h-6 rounded-full bg-emerald-200 dark:bg-emerald-700 text-emerald-700 dark:text-emerald-200 text-xs flex items-center justify-center shrink-0 mt-2">{{ sIndex + 1 }}</span>
@@ -643,6 +655,50 @@
                                 <option value="1.5">1.5</option>
                             </select>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Pengaturan Diktum -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                    <h3 class="font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+                        <i class="fas fa-list-ol text-primary-500"></i> Pengaturan Diktum
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <!-- Gaya Penomoran -->
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Gaya Penomoran Diktum</label>
+                            <select v-model="globalSettings.diktum_style" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none">
+                                <option value="baku">KESATU, KEDUA, KETIGA...</option>
+                                <option value="alternatif">PERTAMA, KEDUA, KETIGA...</option>
+                                <option value="angka">Angka (1., 2., 3., ...)</option>
+                            </select>
+                        </div>
+
+                        <!-- Header Diktum -->
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Awalan Header Diktum</label>
+                            <select v-model="globalSettings.diktum_header_type" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none">
+                                <option value="keputusan">KEPUTUSAN</option>
+                                <option value="keputusan_bersama">KEPUTUSAN BERSAMA</option>
+                                <option value="penetapan">PENETAPAN</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Diktum Justify Toggle -->
+                        <label class="flex items-center justify-between cursor-pointer pt-2 border-t border-slate-200 dark:border-slate-700">
+                            <div class="flex items-center gap-3">
+                                <div>
+                                    <span class="font-semibold text-slate-700 dark:text-slate-200 block text-sm">Diktum Rata Kiri-Kanan</span>
+                                    <span class="text-[10px] text-slate-400">Terapkan rata kiri-kanan pada isi diktum.</span>
+                                </div>
+                            </div>
+                            <div class="relative">
+                                <input type="checkbox" v-model="globalSettings.diktum_justify" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-300 dark:bg-slate-600 rounded-full peer-checked:bg-primary-500 transition-colors"></div>
+                                <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
+                            </div>
+                        </label>
                     </div>
                 </div>
 

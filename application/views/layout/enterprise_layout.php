@@ -10,6 +10,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- jQuery & Select2 -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <!-- Vue 3 CDN (must load before view scripts) -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <!-- Tailwind CSS -->
@@ -37,12 +41,25 @@
     </script>
     <style>
         body { font-family: 'Inter', sans-serif; }
+        .select2-container .select2-selection--single {
+            height: 38px !important;
+            border-color: #d1d5db !important;
+            border-radius: 0.375rem !important;
+            display: flex;
+            align-items: center;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 36px !important;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
 
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-navy-900/50 backdrop-blur-sm z-[60] hidden lg:hidden transition-opacity opacity-0 pointer-events-none"></div>
+
     <!-- Sidebar -->
-    <aside class="fixed inset-y-0 left-0 w-64 bg-navy-900 text-white transition-transform duration-300 z-50 flex flex-col">
+    <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-navy-900 text-white transition-transform duration-300 z-[70] flex flex-col -translate-x-full lg:translate-x-0">
         <!-- Logo -->
         <div class="h-16 flex items-center px-6 bg-navy-900 border-b border-slate-700/50 shrink-0">
             <i class="fa-solid fa-file-signature text-teal-500 text-xl mr-3"></i>
@@ -119,15 +136,22 @@
     </aside>
 
     <!-- Main Content Wrapper -->
-    <div class="ml-64 min-h-screen flex flex-col">
+    <div class="lg:ml-64 min-h-screen flex flex-col transition-all duration-300">
         
         <!-- Header -->
-        <header class="h-16 bg-white border-b border-slate-200 sticky top-0 z-40 flex items-center justify-between px-8 shadow-sm">
-            <!-- Breadcrumbs / Page Title -->
-            <div class="text-sm text-slate-500">
-                <span class="font-medium text-slate-800">Enterprise Edition</span>
-                <span class="mx-2 text-slate-300">/</span>
-                <span class="capitalize font-semibold text-teal-600"><?= $segment ?: 'Dashboard' ?></span>
+        <header class="h-16 bg-white border-b border-slate-200 sticky top-0 z-40 flex items-center justify-between px-4 lg:px-8 shadow-sm">
+            <div class="flex items-center gap-4">
+                <!-- Mobile Menu Button -->
+                <button id="mobileMenuBtn" class="lg:hidden p-2 text-slate-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                
+                <!-- Breadcrumbs / Page Title -->
+                <div class="text-sm text-slate-500 hidden sm:block">
+                    <span class="font-medium text-slate-800 hidden md:inline">Enterprise Edition</span>
+                    <span class="mx-2 text-slate-300 hidden md:inline">/</span>
+                    <span class="capitalize font-semibold text-teal-600"><?= $segment ?: 'Dashboard' ?></span>
+                </div>
             </div>
 
             <!-- Right Actions -->
@@ -210,6 +234,32 @@
             const btnLanjut = document.getElementById('btnLanjut');
             const select = document.getElementById('templateSelect');
             
+            // Mobile Sidebar Toggle Logic
+            const sidebar = document.getElementById('sidebar');
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+            function toggleSidebar() {
+                const isClosed = sidebar.classList.contains('-translate-x-full');
+                if (isClosed) {
+                    sidebar.classList.remove('-translate-x-full');
+                    sidebarOverlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+                    sidebarOverlay.classList.add('opacity-100');
+                } else {
+                    sidebar.classList.add('-translate-x-full');
+                    sidebarOverlay.classList.remove('opacity-100');
+                    sidebarOverlay.classList.add('opacity-0', 'pointer-events-none');
+                    setTimeout(() => sidebarOverlay.classList.add('hidden'), 300); // Wait for transition
+                }
+            }
+
+            if(mobileMenuBtn) {
+                mobileMenuBtn.addEventListener('click', toggleSidebar);
+            }
+            if(sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', toggleSidebar);
+            }
+            
             // Open Modal
             if(btnOpen) {
                 btnOpen.addEventListener('click', (e) => {
@@ -228,6 +278,9 @@
             
             // Load Templates
             async function loadTemplates() {
+                if ($.fn.select2 && $(select).hasClass("select2-hidden-accessible")) {
+                    $(select).select2('destroy');
+                }
                 select.innerHTML = '<option>Loading...</option>';
                 try {
                     const res = await fetch('<?= site_url('sk_editor/api_get_templates') ?>');
@@ -239,11 +292,19 @@
                         return;
                     }
                     
+                    select.innerHTML = '<option value=""></option>'; // For Select2 placeholder
+                    
                     data.forEach(t => {
                         const opt = document.createElement('option');
                         opt.value = t.id;
                         opt.textContent = t.name;
                         select.appendChild(opt);
+                    });
+
+                    $(select).select2({
+                        placeholder: "Ketik untuk mencari template...",
+                        width: '100%',
+                        dropdownParent: $('#templateModal')
                     });
                 } catch(e) {
                     console.error(e);
@@ -254,7 +315,7 @@
             // Lanjut
             if(btnLanjut) {
                 btnLanjut.addEventListener('click', () => {
-                    const val = select.value;
+                    const val = $(select).val();
                     if(val) {
                         window.location.href = '<?= site_url('sk_editor/create/') ?>' + val;
                     } else {

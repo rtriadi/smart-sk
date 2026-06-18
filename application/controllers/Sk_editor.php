@@ -362,6 +362,32 @@ class Sk_editor extends CI_Controller {
         redirect('sk_editor/archives');
     }
 
+    private function _number_to_diktum($num, $style = 'baku') {
+        if ($style === 'angka') return $num . '.';
+        
+        $words = [
+            1 => 'KESATU', 2 => 'KEDUA', 3 => 'KETIGA', 4 => 'KEEMPAT', 5 => 'KELIMA',
+            6 => 'KEENAM', 7 => 'KETUJUH', 8 => 'KEDELAPAN', 9 => 'KESEMBILAN', 10 => 'KESEPULUH',
+            11 => 'KESEBELAS'
+        ];
+        
+        if ($style === 'alternatif' && $num == 1) {
+            return 'PERTAMA';
+        }
+        
+        if (isset($words[$num])) {
+            return $words[$num];
+        }
+        
+        if ($num < 20) {
+            $base = [1=>'SATU', 2=>'DUA', 3=>'TIGA', 4=>'EMPAT', 5=>'LIMA', 6=>'ENAM', 7=>'TUJUH', 8=>'DELAPAN', 9=>'SEMBILAN'];
+            return 'KE' . $base[$num - 10] . ' BELAS';
+        }
+        
+        // For 20+, just use KE-20
+        return 'KE-' . $num;
+    }
+
     /**
      * Prepare SK HTML
      * Merges template pattern with data using Mustache engine.
@@ -383,6 +409,190 @@ class Sk_editor extends CI_Controller {
         // Merge Settings into Data
         $data = $input_data ?: [];
         $data['globalSettings'] = $settings;
+
+        // --- ALIGN SERVER-SIDE FORMATTING WITH VUE CLIENT FORMATTING ---
+
+        $mandatorySettings = isset($settings['mandatorySettings']) ? $settings['mandatorySettings'] : [];
+
+        // 1. Clean Title Name if show_gelar is false
+        if (isset($settings['show_gelar']) && $settings['show_gelar'] === false && isset($data['nama_penandatangan'])) {
+            $name = trim($data['nama_penandatangan']);
+            // Safe prefixes to strip
+            $prefixes = ['Dr\.', 'Drs\.', 'Dra\.', 'Prof\.', 'Ir\.', 'H\.', 'Hj\.', 'K\.H\.', 'KH\.'];
+            $pattern = '/^(' . implode('|', $prefixes) . ')\s*/i';
+            
+            // Strip up to 3 prefixes (e.g., Prof. Dr. H.)
+            $name = preg_replace($pattern, '', $name);
+            $name = preg_replace($pattern, '', $name);
+            $name = preg_replace($pattern, '', $name);
+            
+            // Strip suffixes (anything after a comma)
+            $name = preg_replace('/,.*$/', '', $name);
+            $data['nama_penandatangan'] = trim($name);
+        }
+
+        // Prepare empty defaults for NIP and Hijri if hidden
+        if (isset($mandatorySettings['tampilkan_nip']) && $mandatorySettings['tampilkan_nip'] === false) {
+            $data['nip_penandatangan'] = ''; 
+            // Also clean up hanging "NIP." text in HTML template just in case
+            $html = preg_replace('/N\.?I\.?P\.?\s*{{nip_penandatangan}}/i', '{{nip_penandatangan}}', $html);
+            // Catch hanging NIP inside tags
+            $html = preg_replace('/N\.?I\.?P\.?\s*<\//i', '</', $html);
+        }
+
+        if (isset($mandatorySettings['tampilkan_hijriah']) && $mandatorySettings['tampilkan_hijriah'] === false) {
+            $data['tanggal_hijri'] = ''; 
+            $html = preg_replace('/<p[^>]*>\s*{{tanggal_hijri}}\s*<\/p>/', '', $html);
+            $html = str_replace('{{tanggal_hijri}}', '', $html);
+            $html = preg_replace('/\s*\/\s*{{tanggal_hijri}}/', '', $html);
+            $html = preg_replace('/\({{tanggal_hijri}}\)/', '', $html);
+        }
+
+        // 4. Inject global/mandatory settings directly to root data for Mustache
+        if (isset($mandatorySettings['jumlah_salinan'])) $data['jumlah_salinan'] = $mandatorySettings['jumlah_salinan'];
+        if (isset($mandatorySettings['nomor_urut'])) $data['nomor_urut'] = $mandatorySettings['nomor_urut'];
+        foreach ($settings as $k => $v) {
+            if (!is_array($v)) $data['globalSettings.' . $k] = $v;
+        }
+
+        // 5. Smart Jabatan pre-processor (KEPUTUSAN & TENTANG)
+        $jabatanUpper = isset($data['jabatan_penandatangan']) ? strtoupper($data['jabatan_penandatangan']) : '';
+        $masterPengadilan = isset($settings['master_pengadilan']) ? strtoupper($settings['master_pengadilan']) : '';
+        $gabunganJabatan = trim($jabatanUpper . ' ' . $masterPengadilan);
+        if ($gabunganJabatan) {
+            // The LAST {{jabatan_penandatangan}} in template is the signature block -> keep original (KETUA only)
+            // All OTHER occurrences (header, section separator) -> use combined version
+            $lastIdx = strrpos($html, '{{jabatan_penandatangan}}');
+            if ($lastIdx !== false) {
+                $html = substr($html, 0, $lastIdx) . '{{__sig_jabatan__}}' . substr($html, $lastIdx + strlen('{{jabatan_penandatangan}}'));
+            }
+            $html = str_replace('{{jabatan_penandatangan}}', $gabunganJabatan, $html);
+            $html = str_replace('{{__sig_jabatan__}}', $jabatanUpper);
+        }
+
+        // 6. Build the "Menetapkan" diktum placeholder
+        $judulUpper = isset($data['judul_sk']) ? strtoupper($data['judul_sk']) : '';
+        
+        $headerType = isset($settings['diktum_header_type']) ? $settings['diktum_header_type'] : 'keputusan';
+        $diktumHeaderPrefix = 'KEPUTUSAN';
+        if ($headerType === 'keputusan_bersama') {
+            $diktumHeaderPrefix = 'KEPUTUSAN BERSAMA';
+        } elseif ($headerType === 'penetapan') {
+            $diktumHeaderPrefix = 'PENETAPAN';
+        }
+        
+        $menetapkanHeader = $diktumHeaderPrefix . ' ' . $jabatanUpper . ' ' . $masterPengadilan . ' TENTANG ' . $judulUpper;
+        
+        $diktumItems = isset($data['list_diktum']) ? $data['list_diktum'] : [];
+        if (!empty($diktumItems)) {
+            $diktumStyle = isset($settings['diktum_style']) ? $settings['diktum_style'] : 'baku';
+            $diktumHtml = $menetapkanHeader;
+            
+            // Apply justify alignment to diktum content when enabled (default ON)
+            $diktumAlign = (isset($settings['diktum_justify']) && $settings['diktum_justify'] === false) ? 'left' : 'justify';
+            
+            foreach ($diktumItems as $idx => $item) {
+                $label = $this->_number_to_diktum($idx + 1, $diktumStyle);
+                $formattedItem = nl2br(htmlspecialchars($item, ENT_QUOTES, 'UTF-8'));
+                $diktumHtml .= '</td></tr></tbody></table>';
+                $diktumHtml .= '<table style="width: 100%; border: none; margin-bottom: 5px;"><tbody>';
+                $diktumHtml .= '<tr>';
+                $diktumHtml .= '<td style="width: 120px; vertical-align: top; border: none; padding: 5px 0;">' . $label . '</td>';
+                $diktumHtml .= '<td style="width: 20px; vertical-align: top; border: none; padding: 5px 0;">:</td>';
+                $diktumHtml .= '<td style="vertical-align: top; border: none; padding: 5px 0; text-align: ' . $diktumAlign . ';">' . $formattedItem . '</td>';
+                $diktumHtml .= '</tr>';
+            }
+            $html = str_replace('{{diktum_placeholder}}', $diktumHtml, $html);
+        } else {
+            $html = str_replace('{{diktum_placeholder}}', $menetapkanHeader, $html);
+        }
+
+        // 7. Inject Salinan / Tembusan BEFORE attachments
+        if (!empty($data['salinan']) && is_array($data['salinan'])) {
+            $filteredSalinan = array_filter($data['salinan'], function($s) { return trim($s) !== ''; });
+            if (!empty($filteredSalinan)) {
+                $distType = isset($settings['distribusi_type']) ? $settings['distribusi_type'] : 'salinan';
+                
+                $distIntro = 'SALINAN Keputusan ini disampaikan kepada:';
+                if ($distType === 'petikan') {
+                    $distIntro = 'PETIKAN Keputusan ini disampaikan kepada:';
+                } elseif ($distType === 'tembusan') {
+                    $distIntro = 'Tembusan:';
+                } elseif ($distType === 'tembusan_yth') {
+                    $distIntro = 'Tembusan Yth:';
+                }
+
+                $salinanHtml = '<div style="margin-top: 40px;">';
+                $salinanHtml .= '<p style="margin: 0 0 5px 0;">' . $distIntro . '</p>';
+                $idx = 1;
+                foreach ($filteredSalinan as $s) {
+                    $salinanHtml .= '<p style="margin: 0; padding-left: 2em; text-indent: -1.5em;">' . $idx . '.&nbsp;&nbsp;' . nl2br(htmlspecialchars($s, ENT_QUOTES, 'UTF-8')) . '</p>';
+                    $idx++;
+                }
+                $salinanHtml .= '</div>';
+                $html .= $salinanHtml;
+            }
+        }
+
+        // 8. Inject Attachments
+        if (!empty($data['attachments']) && is_array($data['attachments'])) {
+            $toRoman = function($num) {
+                $lookup = ['M'=>1000, 'CM'=>900, 'D'=>500, 'CD'=>400, 'C'=>100, 'XC'=>90, 'L'=>50, 'XL'=>40, 'X'=>10, 'IX'=>9, 'V'=>5, 'IV'=>4, 'I'=>1];
+                $roman = '';
+                foreach ($lookup as $i => $v) {
+                    while ($num >= $v) {
+                        $roman .= $i;
+                        $num -= $v;
+                    }
+                }
+                return $roman;
+            };
+
+            $totalAtth = count($data['attachments']);
+            foreach ($data['attachments'] as $index => $att) {
+                $noSK = isset($data['no_sk']) ? $data['no_sk'] : '...';
+                $tanggalIndo = isset($data['tanggal_indo']) ? $data['tanggal_indo'] : '...';
+                $pejabatJabatan = strtoupper($jabatanUpper);
+                $judulAttr = isset($data['judul_sk']) ? strtoupper($data['judul_sk']) : (isset($data['tentang']) ? strtoupper($data['tentang']) : '');
+                
+                $lampiranLabel = 'LAMPIRAN';
+                if ($totalAtth > 1) {
+                    $lampiranLabel .= ' ' . $toRoman($index + 1);
+                }
+
+                $title = isset($att['title']) ? $att['title'] : 'Lampiran';
+                $content = isset($att['content']) ? $att['content'] : '';
+
+                $lampiranHtml = '
+                    <!-- pagebreak -->
+                    <div class="smart-attachment-break" data-title="' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '"></div>
+                    <div class="attachment-header" style="float: right; text-align: left; width: 75%; margin-bottom: 20px; font-size: 10pt; line-height: 1.2;">
+                        <table>
+                            <tr>
+                                <td style="vertical-align: top; white-space: nowrap; width: 1%;">' . $lampiranLabel . '</td>
+                                <td style="vertical-align: top; width: 1%; padding: 0 5px;">:</td>
+                                <td style="vertical-align: top;">' . $diktumHeaderPrefix . ' ' . $pejabatJabatan . '<br>TENTANG ' . $judulAttr . '</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: top;">NOMOR</td>
+                                <td style="vertical-align: top;">:</td>
+                                <td>' . htmlspecialchars($noSK, ENT_QUOTES, 'UTF-8') . '</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: top;">TANGGAL</td>
+                                <td style="vertical-align: top;">:</td>
+                                <td>' . htmlspecialchars($tanggalIndo, ENT_QUOTES, 'UTF-8') . '</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div style="clear: both;"></div>
+                    <div class="attachment-content">
+                        ' . $content . '
+                    </div>
+                ';
+                $html .= $lampiranHtml;
+            }
+        }
 
         // 1. SYNTAX CONVERSION (Handlebars -> Mustache)
         
@@ -456,6 +666,34 @@ class Sk_editor extends CI_Controller {
         } catch (\Error $e) {
             error_log('Smart-SK Mustache Fatal Error: ' . $e->getMessage());
             $html .= "<br><b>Fatal Error: " . $e->getMessage() . "</b>";
+        }
+
+        // 2. Clean up dangling "NIP. " if tampilkan_nip is false
+        if (isset($mandatorySettings['tampilkan_nip']) && $mandatorySettings['tampilkan_nip'] === false) {
+            $html = preg_replace('/NIP\.\s*(?=<)/', '', $html);
+            $html = preg_replace('/NIP\.\s*$/m', '', $html);
+        }
+
+        // 2.5 Inject Logo
+        $useSkLogo = isset($settings['useSkLogo']) ? $settings['useSkLogo'] : true;
+        if ($useSkLogo !== false) {
+            $logoData = '';
+            if (!empty($settings['customSkLogo'])) {
+                $logoData = $settings['customSkLogo'];
+            } elseif (!empty($settings['defaultSkLogo'])) {
+                $logoData = $settings['defaultSkLogo'];
+            }
+
+            if (!empty($logoData)) {
+                $logoWidthPx = isset($settings['skLogoWidth']) ? (float)$settings['skLogoWidth'] : 100;
+                // Convert browser pixels (96 DPI) to millimeters for consistent sizing in PDF
+                $logoWidthMm = $logoWidthPx * (25.4 / 96);
+                
+                $logoHtml = '<div style="text-align: center; width: 100%; margin: 0 0 15px 0;"><img src="' . htmlspecialchars($logoData, ENT_QUOTES) . '" style="width: ' . $logoWidthMm . 'mm; height: auto; display: inline-block;"></div>';
+                
+                // Add to the top of HTML
+                $html = $logoHtml . $html;
+            }
         }
 
         // 3. Convert pagebreak comments to visible elements
